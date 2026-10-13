@@ -28,7 +28,8 @@ mit dem Tool ArtifactData (action "batch", ein Aufruf mit allen Dokumenten).
 2. Je Projekt ein Dokument in Collection "projekte", doc_id "<recherche-doc_id>__01", "__02" … nach Score absteigend. Felder:
    rechercheId, titel, kunde, einsatzort, land (DE/AT/CH …), remoteAnteil (Zahl 0–100, null wenn nicht genannt),
    remoteHinweis, veroeffentlicht (JJJJ-MM-TT), laufzeit, start (JJJJ-MM-TT oder "ASAP"), passung, anforderungen[],
-   ansprechpartner {name, email, telefon}, link, plattform, s4hana (true/false), score (0–10, eine Nachkommastelle).
+   ansprechpartner {anrede ("Herr"/"Frau", nur wenn genannt), name, email, telefon}, link, plattform, s4hana (true/false),
+   score (0–10, eine Nachkommastelle).
 3. Die Collection "status" nie anfassen. Dort pflegt der Ressourcenmanager den Bearbeitungsstand.
 
 Mehr als 49 Projekte auf mehrere batch-Aufrufe verteilen. Fehlende Angaben weglassen statt zu raten.
@@ -84,7 +85,7 @@ Regeln: fehlende Angaben weglassen statt zu raten · remoteAnteil als Zahl 0–1
       "start": "2026-11-01",
       "passung": "…",
       "anforderungen": ["…", "…"],
-      "ansprechpartner": { "name": "…", "email": "…", "telefon": "…" },
+      "ansprechpartner": { "anrede": "Herr", "name": "…", "email": "…", "telefon": "…" },
       "link": "https://…",
       "plattform": "Freelancermap",
       "s4hana": true,

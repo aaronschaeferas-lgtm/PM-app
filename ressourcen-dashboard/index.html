@@ -165,7 +165,8 @@ h1{font-weight:780;font-stretch:85%;font-size:1.6rem;line-height:1.05;letter-spa
 @media (max-width:820px){.mailcfg .cols{grid-template-columns:minmax(0,1fr)}}
 .mailcfg .stack{display:grid;gap:12px;align-content:start;min-width:0}
 .mailcfg .field input,.mailcfg .field select{width:100%;background:var(--bg)}
-#mv-text{width:100%;min-height:300px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px 12px;font:400 .9rem/1.5 var(--f-body)}
+#mv-angebot{min-height:170px!important}
+#mv-text,#mv-angebot{width:100%;min-height:300px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px 12px;font:400 .9rem/1.5 var(--f-body)}
 .hint{margin:0;font-size:.85rem;color:var(--muted);max-width:60ch}
 .ph{font:500 .74rem/1.2 var(--f-data);padding:3px 6px;border-radius:5px;background:var(--sunken);color:var(--ink)}
 .actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -311,7 +312,7 @@ const state = {
   filters: { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv", sort: "score" },
   open: new Set(), drafts: {}, importText: "", importMsg: null, confirmDel: null, busy: false,
   exp: { open: false, fmt: "kurz", head: true, contact: false }, ptext: new Set(),
-  mailApp: "mailto", mailTpl: {}, mvOpen: false, mvDraft: null, mailed: new Set(), mailText: new Set(),
+  mailApp: "mailto", mailTpl: {}, anreden: {}, mvOpen: false, mvDraft: null, mailed: new Set(), mailText: new Set(),
 };
 try {
   const s = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
@@ -614,18 +615,68 @@ Gerne sende ich Ihnen das Profil zu und stimme Stundensatz und Starttermin mit I
 Ausschreibung: {link}
 
 Viele Grüße`,
+  angebot: `{anrede},
+
+gerne würden wir Ihnen ein passendes Beraterprofil für diese Position anbieten.
+Die Profile befinden sich im Anhang.
+
+Bei weiteren Fragen stehe ich gerne zur Verfügung.`,
 };
 const PLACEHOLDERS = ["anrede", "ansprechpartner", "titel", "kunde", "plattform", "link", "start", "laufzeit", "rolle", "module", "seniority", "verfuegbarAb", "auslastung", "remote", "region", "berater"];
 const emailOf = (p) => { const s = String((p.ansprechpartner && p.ansprechpartner.email) || "").trim(); return /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]+$/.test(s) ? s : null; };
 const mailTpl = () => ({
   betreff: (state.mailTpl && typeof state.mailTpl.betreff === "string" && state.mailTpl.betreff.trim()) ? state.mailTpl.betreff : DEFAULT_MAIL.betreff,
   text: (state.mailTpl && typeof state.mailTpl.text === "string" && state.mailTpl.text.trim()) ? state.mailTpl.text : DEFAULT_MAIL.text,
+  angebot: (state.mailTpl && typeof state.mailTpl.angebot === "string" && state.mailTpl.angebot.trim()) ? state.mailTpl.angebot : DEFAULT_MAIL.angebot,
 });
+// The contact as a person: strips "(Talent Acquisition Manager)"-style suffixes and a "Herr"/"Frau" prefix,
+// and returns null for companies ("SOLCOM GmbH") so they get "Sehr geehrte Damen und Herren".
+function personOf(a) {
+  a = a || {};
+  let name = String(a.name || "").replace(/\s*\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  let g = String(a.anrede || "").trim().toLowerCase();
+  const pre = name.match(/^(herrn?|frau)\b\.?\s*/i);
+  if (pre) { if (!g) g = pre[1].toLowerCase(); name = name.slice(pre[0].length).trim(); }
+  if (!name || /&|\b(gmbh|mbh|ag|se|kg|kgaa|ohg|gbr|ug|ltd|inc|llc|plc|bv|co|team|recruiting|personal|hr|jobs|karriere)\b/i.test(name)) return null;
+  const anrede = /^(herrn?|mr)\b/.test(g) ? "Herr" : /^(frau|ms|mrs)\b/.test(g) ? "Frau" : "";
+  return { name, key: name.toLowerCase(), anrede, fromData: !!anrede };
+}
+// Herr/Frau comes from the research data or from the choice made once per contact in the dashboard.
+// It is never guessed from a first name; unknown stays the neutral "Guten Tag Vorname Nachname".
+function salutation(a) {
+  const ps = personOf(a);
+  if (!ps) return "Sehr geehrte Damen und Herren";
+  const g = ps.anrede || state.anreden[ps.key] || "";
+  const toks = ps.name.split(" ");
+  const isTitle = (t) => /^(prof|dr)\b/i.test(t);
+  const titles = toks.filter(isTitle); const rest = toks.filter((t) => !isTitle(t));
+  let i = rest.length - 1;
+  while (i > 0 && /^(von|van|de|der|den|du|zu|zum|zur|di|da|del|ten|ter)$/i.test(rest[i - 1])) i--;
+  const last = [...titles, ...rest.slice(i)].join(" ") || ps.name;
+  if (g === "Herr") return `Sehr geehrter Herr ${last}`;
+  if (g === "Frau") return `Sehr geehrte Frau ${last}`;
+  return `Guten Tag ${ps.name}`;
+}
+function anredeSelect(p) {
+  const ps = personOf(p.ansprechpartner);
+  if (!ps || ps.fromData) return "";
+  const cur = state.anreden[ps.key] || "";
+  const can = state.canWrite && state.db;
+  return `<span class="st" data-st="${cur ? "vorgemerkt" : "neu"}"><select data-anrede-for="${esc(ps.key)}" aria-label="Anrede für ${esc(ps.name)}" title="Gilt für alle Projekte mit ${esc(ps.name)}"${can ? "" : " disabled"}>
+    <option value=""${cur ? "" : " selected"}>Anrede?</option><option value="Herr"${cur === "Herr" ? " selected" : ""}>Herr</option><option value="Frau"${cur === "Frau" ? " selected" : ""}>Frau</option></select></span>`;
+}
+async function saveAnrede(key, value) {
+  const next = { ...state.anreden };
+  if (value) next[key] = value; else delete next[key];
+  state.anreden = next;
+  try { await state.db.doc("meta/anreden").set({ eintraege: Object.entries(next).map(([name, anrede]) => ({ name, anrede })) }); }
+  catch (e) { toast(dbErrorText(e)); }
+}
 function mailVars(p) {
   const run = runById(p.rechercheId) || {}; const b = run.berater || {}; const a = p.ansprechpartner || {};
   const d = (v) => v ? (parseDate(v) ? fmtDate(v) : String(v)) : "";
   return {
-    anrede: a.name ? `Guten Tag ${a.name}` : "Sehr geehrte Damen und Herren",
+    anrede: salutation(a),
     ansprechpartner: a.name || "", titel: p.titel || "", kunde: p.kunde || "", plattform: p.plattform || "",
     link: safeUrl(p.link) || "", start: d(p.start), laufzeit: p.laufzeit || "",
     rolle: b.rolle || "", module: listOf(b.module).join(", "), seniority: b.seniority || "",
@@ -642,7 +693,8 @@ function fillTpl(tpl, vars, dropLines) {
 }
 function mailFor(p) {
   const t = mailTpl(); const v = mailVars(p);
-  return { to: emailOf(p), subject: fillTpl(t.betreff, v, false), body: fillTpl(t.text, v, true) };
+  const to = emailOf(p);
+  return { to, subject: fillTpl(t.betreff, v, false), body: fillTpl(to ? t.text : t.angebot, v, true) };
 }
 function mailHref(m, app) {
   const e = encodeURIComponent;
@@ -665,7 +717,7 @@ function mailBlock(p, small) {
     const hint = name ? `Keine E-Mail hinterlegt. Kopiert den Angebotstext an ${name}.` : "Kein Ansprechpartner genannt. Kopiert den Angebotstext mit „Sehr geehrte Damen und Herren“.";
     main = `<button class="${cls}" data-act="copy-offer" data-id="${esc(id)}" title="${esc(hint)}">Angebotstext kopieren</button>`;
   }
-  const out = [`<div class="mailrow">${main}
+  const out = [`<div class="mailrow">${anredeSelect(p)}${main}
     <button class="linkcopy" data-act="mailtext" data-id="${esc(id)}" aria-expanded="${shown}">${shown ? "Text ausblenden" : "Text anzeigen"}</button>
   </div>${m.to ? "" : `<div class="muted" style="font-size:.8rem;margin-top:-2px">${name ? `An ${esc(name)}, keine E-Mail hinterlegt` : "Kein Ansprechpartner genannt"}</div>`}`];
   if (state.mailed.has(id) && ["neu", "vorgemerkt"].includes(stOf(id)) && state.canWrite && state.db) {
@@ -701,12 +753,14 @@ function renderMailCfg() {
         <div class="field"><label for="mv-app">Mail öffnen mit</label><select id="mv-app">${MAIL_APPS.map(([v, l]) => `<option value="${v}"${state.mailApp === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
         <p class="hint">Gmail und Outlook öffnen die Mail zuverlässig in einem neuen Tab. Das Standard-Mailprogramm startet aus dem Dashboard heraus nicht in jedem Browser. Bleibt der Klick ohne Wirkung, nimm „Mailtext anzeigen“ und kopiere den Text. Diese Auswahl gilt nur auf diesem Gerät.</p>
         <div><p class="eyebrow">Platzhalter</p><div class="chips">${PLACEHOLDERS.map((k) => `<span class="ph">{${k}}</span>`).join("")}</div></div>
-        <p class="hint">{anrede} wird zu „Guten Tag Max Muster“, ohne Namen zu „Sehr geehrte Damen und Herren“. Die Beraterangaben kommen aus der jeweiligen Recherche. Zeilen, deren Platzhalter leer bleiben, fallen weg. Den Namen des Beraters nennt die Vorlage bewusst nicht; dafür gibt es {berater}.</p>
+        <p class="hint">{anrede} wird zu „Sehr geehrter Herr Müller“ oder „Sehr geehrte Frau Müller“. Nennt die Ausschreibung keine Anrede, wählst du sie einmal pro Ansprechpartner neben dem Button; bis dahin heißt es „Guten Tag Max Müller“. Ohne Namen oder bei einer Firma als Kontakt: „Sehr geehrte Damen und Herren“. Die Beraterangaben kommen aus der jeweiligen Recherche. Zeilen, deren Platzhalter leer bleiben, fallen weg. Den Namen des Beraters nennt die Vorlage bewusst nicht; dafür gibt es {berater}.</p>
       </div>
       <div class="stack">
         <div class="field"><label for="mv-betreff">Betreff</label><input id="mv-betreff" type="text" value="${esc(d.betreff)}"${can ? "" : " disabled"}></div>
-        <div class="field"><label for="mv-text">Text</label><textarea id="mv-text" spellcheck="true"${can ? "" : " disabled"}>${esc(d.text)}</textarea></div>
+        <div class="field"><label for="mv-text">Mailtext, wenn eine E-Mail-Adresse bekannt ist</label><textarea id="mv-text" spellcheck="true"${can ? "" : " disabled"}>${esc(d.text)}</textarea></div>
         <p class="hint">Ergänze am Ende deinen Namen und deine Kontaktdaten, falls dein Mailprogramm keine Signatur einfügt.</p>
+        <div class="field"><label for="mv-angebot">Angebotstext, wenn keine E-Mail-Adresse bekannt ist</label><textarea id="mv-angebot" spellcheck="true"${can ? "" : " disabled"}>${esc(d.angebot)}</textarea></div>
+        <p class="hint">Diesen Text kopiert „Angebotstext kopieren“, etwa für das Kontaktformular der Plattform.</p>
         ${can ? `<div class="actions"><button class="btn primary" data-act="mv-save"${state.mvDraft ? "" : " disabled"}>Vorlage speichern</button><button class="btn ghost" data-act="mv-reset">Standardtext einsetzen</button></div>` : ""}
       </div>
     </div>
@@ -715,7 +769,7 @@ function renderMailCfg() {
 
 async function saveMailTpl() {
   if (!state.db || !state.mvDraft) return;
-  const body = { betreff: state.mvDraft.betreff, text: state.mvDraft.text, geaendertAm: new Date().toISOString() };
+  const body = { betreff: state.mvDraft.betreff, text: state.mvDraft.text, angebot: state.mvDraft.angebot, geaendertAm: new Date().toISOString() };
   try { await state.db.doc("meta/mailvorlage").set(body); state.mailTpl = body; state.mvDraft = null; toast("Mailvorlage gespeichert"); }
   catch (e) { toast(dbErrorText(e)); }
   render();
@@ -850,7 +904,7 @@ function renderPipeline() {
   const total = lanes.reduce((n, l) => n + l.items.length, 0);
   return `<div style="display:grid;gap:16px">
     <div class="pipe-head">
-      <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "Mit E-Mail-Adresse öffnet „Mail an …“ eine vorausgefüllte Mail. Ohne Adresse kopiert „Angebotstext kopieren“ denselben Text, an den genannten Ansprechpartner oder an „Sehr geehrte Damen und Herren“." :"Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
+      <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "Mit E-Mail-Adresse öffnet „Mail an …“ eine vorausgefüllte Mail. Ohne Adresse kopiert „Angebotstext kopieren“ den kurzen Angebotstext, an den genannten Ansprechpartner oder an „Sehr geehrte Damen und Herren“." :"Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
       <button class="btn" data-act="mv-toggle" aria-expanded="${state.mvOpen}" aria-controls="mv-h">${state.mvOpen ? "Mailvorlage schließen" : "Mailvorlage bearbeiten"}</button>
     </div>
     ${state.mvOpen ? renderMailCfg() : ""}
@@ -889,7 +943,8 @@ mit dem Tool ArtifactData (action "batch", ein Aufruf mit allen Dokumenten).
 2. Je Projekt ein Dokument in Collection "projekte", doc_id "<recherche-doc_id>__01", "__02" … nach Score absteigend. Felder:
    rechercheId, titel, kunde, einsatzort, land (DE/AT/CH …), remoteAnteil (Zahl 0–100, null wenn nicht genannt),
    remoteHinweis, veroeffentlicht (JJJJ-MM-TT), laufzeit, start (JJJJ-MM-TT oder "ASAP"), passung, anforderungen[],
-   ansprechpartner {name, email, telefon}, link, plattform, s4hana (true/false), score (0–10, eine Nachkommastelle).
+   ansprechpartner {anrede ("Herr"/"Frau", nur wenn genannt), name, email, telefon}, link, plattform, s4hana (true/false),
+   score (0–10, eine Nachkommastelle).
 3. Die Collection "status" nie anfassen. Dort pflegt der Ressourcenmanager den Bearbeitungsstand.
 
 Mehr als 49 Projekte auf mehrere batch-Aufrufe verteilen. Fehlende Angaben weglassen statt zu raten.
@@ -932,7 +987,7 @@ const EXAMPLE_JSON = `{
       "start": "2026-11-01",
       "passung": "…",
       "anforderungen": ["…", "…"],
-      "ansprechpartner": { "name": "…", "email": "…", "telefon": "…" },
+      "ansprechpartner": { "anrede": "Herr", "name": "…", "email": "…", "telefon": "…" },
       "link": "https://…",
       "plattform": "Freelancermap",
       "s4hana": true,
@@ -966,6 +1021,7 @@ function renderAnbindung() {
     ["projekte[].start", "JJJJ-MM-TT oder „ASAP“"],
     ["projekte[].s4hana", "true, wenn S/4HANA-Projekt"],
     ["projekte[].link", "Vollständige https-Adresse der Ausschreibung"],
+    ["projekte[].ansprechpartner", "anrede (Herr/Frau, nur wenn genannt), name, email, telefon. Mit E-Mail gibt es eine vorausgefüllte Mail, sonst den Angebotstext zum Kopieren."],
   ];
   return `<div class="conn">
     <p class="muted" style="margin:0;max-width:72ch">Der Recherche-Claude legt seine Ergebnisse auf einem von zwei Wegen ab. Den Bearbeitungsstand und deine Notizen speichert das Radar getrennt davon, eine neue Recherche überschreibt sie also nicht.</p>
@@ -1024,7 +1080,7 @@ function render() {
 const writeChains = {};
 function saveStatus(pid, patch) {
   const cur = state.status[pid] || {};
-  const body = { status: cur.status || "neu", notiz: cur.notiz || "", ...patch, geaendertAm: new Date().toISOString() };
+  const body = { ...cur, status: cur.status || "neu", notiz: cur.notiz || "", ...patch, geaendertAm: new Date().toISOString() };
   state.status[pid] = body;
   writeChains[pid] = (writeChains[pid] || Promise.resolve())
     .then(() => state.db.doc("status/" + pid).set(body))
@@ -1159,6 +1215,11 @@ document.addEventListener("change", (e) => {
   const t = e.target;
   if (t.dataset.filter) { state.filters[t.dataset.filter] = t.value; persist(); renderList(); }
   else if (t.id === "mv-app") { state.mailApp = t.value; persist(); render(); }
+  else if (t.dataset.anredeFor !== undefined) {
+    saveAnrede(t.dataset.anredeFor, t.value);
+    toast(t.value ? `Anrede: ${t.value}` : "Anrede zurückgesetzt");
+    state.tab === "recherchen" ? renderList() : render();
+  }
   else if (t.dataset.export) {
     const k = t.dataset.export;
     state.exp[k] = t.type === "checkbox" ? t.checked : t.value;
@@ -1181,9 +1242,9 @@ document.addEventListener("input", (e) => {
     const btn = t.closest(".note").querySelector('[data-act="save-note"]'); if (btn) btn.disabled = false;
   }
   else if (t.id === "import-json") { state.importText = t.value; }
-  else if (t.id === "mv-betreff" || t.id === "mv-text") {
+  else if (t.id === "mv-betreff" || t.id === "mv-text" || t.id === "mv-angebot") {
     state.mvDraft = state.mvDraft || mailTpl();
-    state.mvDraft[t.id === "mv-text" ? "text" : "betreff"] = t.value;
+    state.mvDraft[{ "mv-text": "text", "mv-angebot": "angebot", "mv-betreff": "betreff" }[t.id]] = t.value;
     const b = document.querySelector('[data-act="mv-save"]'); if (b) b.disabled = false;
   }
 });
@@ -1206,6 +1267,10 @@ render();
   }, onErr);
   db.doc("meta/anbindung").onSnapshot((d) => { state.meta = d.exists ? d.data() : {}; if (state.tab === "anbindung") render(); }, onErr);
   db.doc("meta/mailvorlage").onSnapshot((d) => { state.mailTpl = d.exists ? d.data() : {}; render(); }, onErr);
+  db.doc("meta/anreden").onSnapshot((d) => {
+    const m = {}; arr(d.exists && d.data().eintraege).forEach((e) => { if (e && e.name && (e.anrede === "Herr" || e.anrede === "Frau")) m[String(e.name)] = e.anrede; });
+    state.anreden = m; render();
+  }, onErr);
   try {
     const user = await window.claude.use("user");
     if (user) { const c = await user.can("data.write"); if (c === false) { state.canWrite = false; render(); } }
