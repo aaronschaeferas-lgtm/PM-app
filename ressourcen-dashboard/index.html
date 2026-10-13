@@ -650,23 +650,45 @@ function mailHref(m, app) {
   if (app === "outlook") return `https://outlook.office.com/mail/deeplink/compose?to=${e(m.to)}&subject=${e(m.subject)}&body=${e(m.body)}`;
   return `mailto:${e(m.to).replace(/%40/g, "@")}?subject=${e(m.subject)}&body=${e(m.body.replace(/\n/g, "\r\n"))}`;
 }
+// With an email address the button opens a prefilled mail; without one it copies the offer text,
+// addressed by name if a contact is named, otherwise "Sehr geehrte Damen und Herren".
 function mailBlock(p, small) {
-  if (!emailOf(p)) return "";
   const id = p.id; const m = mailFor(p); const app = state.mailApp;
-  const appLabel = (MAIL_APPS.find((x) => x[0] === app) || MAIL_APPS[0])[1];
-  const who = (p.ansprechpartner && p.ansprechpartner.name) || m.to;
-  const out = [`<div class="mailrow">
-    <a class="btn primary${small ? " sm" : ""}" href="${esc(mailHref(m, app))}"${app === "mailto" ? "" : ` target="_blank" rel="noopener noreferrer"`} data-act="mail" data-id="${esc(id)}" title="Vorausgefüllte Mail an ${esc(m.to)} öffnen (${esc(appLabel)})">Mail an ${esc(who)}</a>
-    <button class="linkcopy" data-act="mailtext" data-id="${esc(id)}" aria-expanded="${state.mailText.has(id)}">${state.mailText.has(id) ? "Mailtext ausblenden" : "Mailtext anzeigen"}</button>
-  </div>`];
-  if (state.mailed.has(id) && ["neu", "vorgemerkt"].includes(stOf(id)) && state.canWrite && state.db) {
-    out.push(`<div class="mailnext"><span>Mail abgeschickt?</span><button class="btn sm" data-act="mark-sent" data-id="${esc(id)}">Auf „Profil gesendet“ setzen</button></div>`);
+  const name = (p.ansprechpartner && p.ansprechpartner.name) || "";
+  const cls = `btn primary${small ? " sm" : ""}`;
+  const shown = state.mailText.has(id);
+  let main;
+  if (m.to) {
+    const appLabel = (MAIL_APPS.find((x) => x[0] === app) || MAIL_APPS[0])[1];
+    main = `<a class="${cls}" href="${esc(mailHref(m, app))}"${app === "mailto" ? "" : ` target="_blank" rel="noopener noreferrer"`} data-act="mail" data-id="${esc(id)}" title="Vorausgefüllte Mail an ${esc(m.to)} öffnen (${esc(appLabel)})">Mail an ${esc(name || m.to)}</a>`;
+  } else {
+    const hint = name ? `Keine E-Mail hinterlegt. Kopiert den Angebotstext an ${name}.` : "Kein Ansprechpartner genannt. Kopiert den Angebotstext mit „Sehr geehrte Damen und Herren“.";
+    main = `<button class="${cls}" data-act="copy-offer" data-id="${esc(id)}" title="${esc(hint)}">Angebotstext kopieren</button>`;
   }
-  if (state.mailText.has(id)) {
+  const out = [`<div class="mailrow">${main}
+    <button class="linkcopy" data-act="mailtext" data-id="${esc(id)}" aria-expanded="${shown}">${shown ? "Text ausblenden" : "Text anzeigen"}</button>
+  </div>${m.to ? "" : `<div class="muted" style="font-size:.8rem;margin-top:-2px">${name ? `An ${esc(name)}, keine E-Mail hinterlegt` : "Kein Ansprechpartner genannt"}</div>`}`];
+  if (state.mailed.has(id) && ["neu", "vorgemerkt"].includes(stOf(id)) && state.canWrite && state.db) {
+    out.push(`<div class="mailnext"><span>${m.to ? "Mail abgeschickt?" : "Angebot verschickt?"}</span><button class="btn sm" data-act="mark-sent" data-id="${esc(id)}">Auf „Profil gesendet“ setzen</button></div>`);
+  }
+  if (shown) {
     const f = (k, l, v) => `<div class="mf"><div class="mf-head"><span>${l}</span><button class="linkcopy" data-act="copy" data-target="mt-${k}-${esc(id)}">kopieren</button></div><pre id="mt-${k}-${esc(id)}">${esc(v)}</pre></div>`;
-    out.push(`<div class="mailbox">${f("to", "An", m.to)}${f("su", "Betreff", m.subject)}${f("tx", "Text", m.body)}</div>`);
+    out.push(`<div class="mailbox">${m.to ? f("to", "An", m.to) : ""}${f("su", "Betreff", m.subject)}${f("tx", "Text", m.body)}</div>`);
   }
   return out.join("");
+}
+function copyOffer(id) {
+  const p = state.projects.find((x) => x.id === id); if (!p) return;
+  const rerender = () => (state.tab === "recherchen" ? renderList() : render());
+  const fallback = () => {
+    state.mailed.add(id); state.mailText.add(id); rerender();
+    const el = document.getElementById("mt-tx-" + id);
+    if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+    toast("Text ist markiert. Mit Strg+C kopieren.");
+  };
+  try {
+    navigator.clipboard.writeText(mailFor(p).body).then(() => { state.mailed.add(id); rerender(); toast("Angebotstext kopiert"); }, fallback);
+  } catch (e) { fallback(); }
 }
 
 function renderMailCfg() {
@@ -769,7 +791,7 @@ function renderProject(p, run) {
           ${a.name ? `<div class="row"><strong>${esc(a.name)}</strong></div>` : ""}
           ${a.email ? `<div class="row"><span class="mono" id="em-${esc(p.id)}">${esc(a.email)}</span><button class="linkcopy" data-act="copy" data-target="em-${esc(p.id)}">kopieren</button></div>` : ""}
           ${a.telefon ? `<div class="row"><span class="mono" id="tel-${esc(p.id)}">${esc(a.telefon)}</span><button class="linkcopy" data-act="copy" data-target="tel-${esc(p.id)}">kopieren</button></div>` : ""}
-        </div>${emailOf(p) ? `<div style="display:grid;gap:8px;margin-top:6px">${mailBlock(p, false)}</div>` : ""}` : `<p class="muted">Nicht angegeben.</p>`}</div>
+        </div>` : `<p class="muted">Nicht angegeben.</p>`}<div style="display:grid;gap:8px;margin-top:6px">${mailBlock(p, false)}</div></div>
         <div class="blk">
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung öffnen ↗</a>` : `<span class="chip warn">Kein gültiger Link hinterlegt</span>`}<button class="btn" data-act="ptext" data-id="${esc(p.id)}" aria-expanded="${state.ptext.has(p.id)}">Als Text</button></div>
           ${state.ptext.has(p.id) ? `<div class="codebox ptext"><pre id="pt-${esc(p.id)}">${esc(projText(p, { fmt: "lang", contact: state.exp.contact }).join("\n"))}</pre><button class="btn" data-act="copy" data-target="pt-${esc(p.id)}">Kopieren</button></div>` : ""}
@@ -828,7 +850,7 @@ function renderPipeline() {
   const total = lanes.reduce((n, l) => n + l.items.length, 0);
   return `<div style="display:grid;gap:16px">
     <div class="pipe-head">
-      <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "Ist beim Ansprechpartner eine E-Mail hinterlegt, öffnet „Mail an …“ eine vorausgefüllte Mail." : "Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
+      <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "Mit E-Mail-Adresse öffnet „Mail an …“ eine vorausgefüllte Mail. Ohne Adresse kopiert „Angebotstext kopieren“ denselben Text, an den genannten Ansprechpartner oder an „Sehr geehrte Damen und Herren“." :"Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
       <button class="btn" data-act="mv-toggle" aria-expanded="${state.mvOpen}" aria-controls="mv-h">${state.mvOpen ? "Mailvorlage schließen" : "Mailvorlage bearbeiten"}</button>
     </div>
     ${state.mvOpen ? renderMailCfg() : ""}
@@ -1116,6 +1138,7 @@ document.addEventListener("click", (e) => {
     setTimeout(() => (state.tab === "recherchen" ? renderList() : render()), 0);
   }
   else if (act === "mailtext") { state.mailText.has(id) ? state.mailText.delete(id) : state.mailText.add(id); state.tab === "recherchen" ? renderList() : render(); }
+  else if (act === "copy-offer") copyOffer(id);
   else if (act === "mark-sent") { saveStatus(id, { status: "gesendet" }); state.mailed.delete(id); toast("Status: Profil gesendet"); render(); }
   else if (act === "mv-toggle") { state.mvOpen = !state.mvOpen; render(); }
   else if (act === "mv-save") saveMailTpl();
