@@ -150,6 +150,25 @@ h1{font-weight:780;font-stretch:85%;font-size:1.6rem;line-height:1.05;letter-spa
 .export .codebox pre{font-family:var(--f-body);font-size:.88rem;line-height:1.5;padding-right:120px;max-height:420px}
 .ptext{margin-top:10px}
 .ptext pre{font-family:var(--f-body)!important;font-size:.85rem!important;padding-right:96px!important}
+/* mail to contact */
+.btn.sm{padding:5px 10px;font-size:.8rem}
+.mailrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.mailnext{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.84rem;padding:8px 10px;border-radius:8px;background:var(--accent-soft)}
+.mailbox{display:grid;gap:8px}
+.mailbox .mf{display:grid;gap:3px;min-width:0}
+.mailbox .mf-head{display:flex;justify-content:space-between;align-items:center;font:600 .66rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mailbox pre{margin:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:400 .84rem/1.5 var(--f-body);white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto}
+.pipe-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.mailcfg{padding:20px 22px;display:grid;gap:14px}
+.mailcfg h3{font-size:1.1rem;font-weight:720;font-stretch:90%}
+.mailcfg .cols{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:24px}
+@media (max-width:820px){.mailcfg .cols{grid-template-columns:minmax(0,1fr)}}
+.mailcfg .stack{display:grid;gap:12px;align-content:start;min-width:0}
+.mailcfg .field input,.mailcfg .field select{width:100%;background:var(--bg)}
+#mv-text{width:100%;min-height:300px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px 12px;font:400 .9rem/1.5 var(--f-body)}
+.hint{margin:0;font-size:.85rem;color:var(--muted);max-width:60ch}
+.ph{font:500 .74rem/1.2 var(--f-data);padding:3px 6px;border-radius:5px;background:var(--sunken);color:var(--ink)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
 @media (max-width:600px){
   .export .codebox,.ptext{display:flex;flex-direction:column-reverse;gap:8px}
   .export .codebox .btn,.ptext .btn{position:static;align-self:flex-start}
@@ -292,6 +311,7 @@ const state = {
   filters: { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv", sort: "score" },
   open: new Set(), drafts: {}, importText: "", importMsg: null, confirmDel: null, busy: false,
   exp: { open: false, fmt: "kurz", head: true, contact: false }, ptext: new Set(),
+  mailApp: "mailto", mailTpl: {}, mvOpen: false, mvDraft: null, mailed: new Set(), mailText: new Set(),
 };
 try {
   const s = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
@@ -299,9 +319,10 @@ try {
   if (s.runId) state.runId = s.runId;
   if (s.filters) Object.assign(state.filters, s.filters, { q: "" });
   if (s.exp) Object.assign(state.exp, s.exp);
+  if (["mailto", "gmail", "outlook"].includes(s.mailApp)) state.mailApp = s.mailApp;
 } catch (e) {}
 function persist() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ tab: state.tab, runId: state.runId, filters: { ...state.filters, q: "" }, exp: state.exp })); } catch (e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ tab: state.tab, runId: state.runId, filters: { ...state.filters, q: "" }, exp: state.exp, mailApp: state.mailApp })); } catch (e) {}
 }
 
 /* ---------- helpers ---------- */
@@ -573,6 +594,111 @@ function renderExport(run, shown) {
   </div>`;
 }
 
+/* ---------- prefilled mail to the contact ---------- */
+const MAIL_APPS = [["mailto", "Standard-Mailprogramm"], ["gmail", "Gmail im Browser"], ["outlook", "Outlook im Browser (Microsoft 365)"]];
+const DEFAULT_MAIL = {
+  betreff: "Ihr Projekt „{titel}“ – passender Berater verfügbar",
+  text: `{anrede},
+
+wir haben Ihre Ausschreibung „{titel}“ gesehen und können Ihnen dafür einen passenden Berater anbieten.
+
+Rolle: {rolle}
+Schwerpunkte: {module}
+Seniorität: {seniority}
+Verfügbar ab: {verfuegbarAb}
+Auslastung: {auslastung}
+Einsatz: {remote}
+
+Gerne sende ich Ihnen das Profil zu und stimme Stundensatz und Starttermin mit Ihnen ab.
+
+Ausschreibung: {link}
+
+Viele Grüße`,
+};
+const PLACEHOLDERS = ["anrede", "ansprechpartner", "titel", "kunde", "plattform", "link", "start", "laufzeit", "rolle", "module", "seniority", "verfuegbarAb", "auslastung", "remote", "region", "berater"];
+const emailOf = (p) => { const s = String((p.ansprechpartner && p.ansprechpartner.email) || "").trim(); return /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]+$/.test(s) ? s : null; };
+const mailTpl = () => ({
+  betreff: (state.mailTpl && typeof state.mailTpl.betreff === "string" && state.mailTpl.betreff.trim()) ? state.mailTpl.betreff : DEFAULT_MAIL.betreff,
+  text: (state.mailTpl && typeof state.mailTpl.text === "string" && state.mailTpl.text.trim()) ? state.mailTpl.text : DEFAULT_MAIL.text,
+});
+function mailVars(p) {
+  const run = runById(p.rechercheId) || {}; const b = run.berater || {}; const a = p.ansprechpartner || {};
+  const d = (v) => v ? (parseDate(v) ? fmtDate(v) : String(v)) : "";
+  return {
+    anrede: a.name ? `Guten Tag ${a.name}` : "Sehr geehrte Damen und Herren",
+    ansprechpartner: a.name || "", titel: p.titel || "", kunde: p.kunde || "", plattform: p.plattform || "",
+    link: safeUrl(p.link) || "", start: d(p.start), laufzeit: p.laufzeit || "",
+    rolle: b.rolle || "", module: listOf(b.module).join(", "), seniority: b.seniority || "",
+    verfuegbarAb: d(b.verfuegbarAb), auslastung: b.auslastung || "", remote: b.remote || "", region: b.region || "", berater: b.name || "",
+  };
+}
+// Lines whose placeholders resolve to nothing are dropped, so a missing field never leaves "Seniorität: " behind.
+function fillTpl(tpl, vars, dropLines) {
+  const rep = (s) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k] ?? "") : m));
+  if (!dropLines) return rep(String(tpl)).replace(/\s{2,}/g, " ").trim();
+  return String(tpl).split(/\r?\n/)
+    .filter((line) => [...line.matchAll(/\{(\w+)\}/g)].every((m) => !(m[1] in vars) || String(vars[m[1]] ?? "").trim()))
+    .map(rep).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+function mailFor(p) {
+  const t = mailTpl(); const v = mailVars(p);
+  return { to: emailOf(p), subject: fillTpl(t.betreff, v, false), body: fillTpl(t.text, v, true) };
+}
+function mailHref(m, app) {
+  const e = encodeURIComponent;
+  if (app === "gmail") return `https://mail.google.com/mail/?view=cm&fs=1&to=${e(m.to)}&su=${e(m.subject)}&body=${e(m.body)}`;
+  if (app === "outlook") return `https://outlook.office.com/mail/deeplink/compose?to=${e(m.to)}&subject=${e(m.subject)}&body=${e(m.body)}`;
+  return `mailto:${e(m.to).replace(/%40/g, "@")}?subject=${e(m.subject)}&body=${e(m.body.replace(/\n/g, "\r\n"))}`;
+}
+function mailBlock(p, small) {
+  if (!emailOf(p)) return "";
+  const id = p.id; const m = mailFor(p); const app = state.mailApp;
+  const appLabel = (MAIL_APPS.find((x) => x[0] === app) || MAIL_APPS[0])[1];
+  const who = (p.ansprechpartner && p.ansprechpartner.name) || m.to;
+  const out = [`<div class="mailrow">
+    <a class="btn primary${small ? " sm" : ""}" href="${esc(mailHref(m, app))}"${app === "mailto" ? "" : ` target="_blank" rel="noopener noreferrer"`} data-act="mail" data-id="${esc(id)}" title="Vorausgefüllte Mail an ${esc(m.to)} öffnen (${esc(appLabel)})">Mail an ${esc(who)}</a>
+    <button class="linkcopy" data-act="mailtext" data-id="${esc(id)}" aria-expanded="${state.mailText.has(id)}">${state.mailText.has(id) ? "Mailtext ausblenden" : "Mailtext anzeigen"}</button>
+  </div>`];
+  if (state.mailed.has(id) && ["neu", "vorgemerkt"].includes(stOf(id)) && state.canWrite && state.db) {
+    out.push(`<div class="mailnext"><span>Mail abgeschickt?</span><button class="btn sm" data-act="mark-sent" data-id="${esc(id)}">Auf „Profil gesendet“ setzen</button></div>`);
+  }
+  if (state.mailText.has(id)) {
+    const f = (k, l, v) => `<div class="mf"><div class="mf-head"><span>${l}</span><button class="linkcopy" data-act="copy" data-target="mt-${k}-${esc(id)}">kopieren</button></div><pre id="mt-${k}-${esc(id)}">${esc(v)}</pre></div>`;
+    out.push(`<div class="mailbox">${f("to", "An", m.to)}${f("su", "Betreff", m.subject)}${f("tx", "Text", m.body)}</div>`);
+  }
+  return out.join("");
+}
+
+function renderMailCfg() {
+  const d = state.mvDraft || mailTpl();
+  const can = state.canWrite && !!state.db;
+  return `<section class="panel mailcfg" aria-labelledby="mv-h">
+    <h3 id="mv-h">Mailvorlage für Ansprechpartner</h3>
+    <div class="cols">
+      <div class="stack">
+        <div class="field"><label for="mv-app">Mail öffnen mit</label><select id="mv-app">${MAIL_APPS.map(([v, l]) => `<option value="${v}"${state.mailApp === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+        <p class="hint">Gmail und Outlook öffnen die Mail zuverlässig in einem neuen Tab. Das Standard-Mailprogramm startet aus dem Dashboard heraus nicht in jedem Browser. Bleibt der Klick ohne Wirkung, nimm „Mailtext anzeigen“ und kopiere den Text. Diese Auswahl gilt nur auf diesem Gerät.</p>
+        <div><p class="eyebrow">Platzhalter</p><div class="chips">${PLACEHOLDERS.map((k) => `<span class="ph">{${k}}</span>`).join("")}</div></div>
+        <p class="hint">{anrede} wird zu „Guten Tag Max Muster“, ohne Namen zu „Sehr geehrte Damen und Herren“. Die Beraterangaben kommen aus der jeweiligen Recherche. Zeilen, deren Platzhalter leer bleiben, fallen weg. Den Namen des Beraters nennt die Vorlage bewusst nicht; dafür gibt es {berater}.</p>
+      </div>
+      <div class="stack">
+        <div class="field"><label for="mv-betreff">Betreff</label><input id="mv-betreff" type="text" value="${esc(d.betreff)}"${can ? "" : " disabled"}></div>
+        <div class="field"><label for="mv-text">Text</label><textarea id="mv-text" spellcheck="true"${can ? "" : " disabled"}>${esc(d.text)}</textarea></div>
+        <p class="hint">Ergänze am Ende deinen Namen und deine Kontaktdaten, falls dein Mailprogramm keine Signatur einfügt.</p>
+        ${can ? `<div class="actions"><button class="btn primary" data-act="mv-save"${state.mvDraft ? "" : " disabled"}>Vorlage speichern</button><button class="btn ghost" data-act="mv-reset">Standardtext einsetzen</button></div>` : ""}
+      </div>
+    </div>
+  </section>`;
+}
+
+async function saveMailTpl() {
+  if (!state.db || !state.mvDraft) return;
+  const body = { betreff: state.mvDraft.betreff, text: state.mvDraft.text, geaendertAm: new Date().toISOString() };
+  try { await state.db.doc("meta/mailvorlage").set(body); state.mailTpl = body; state.mvDraft = null; toast("Mailvorlage gespeichert"); }
+  catch (e) { toast(dbErrorText(e)); }
+  render();
+}
+
 function statusSelect(pid) {
   const st = stOf(pid);
   return `<span class="st" data-st="${st}"><select aria-label="Bearbeitungsstand" data-status-for="${esc(pid)}"${state.canWrite && state.db ? "" : " disabled"}>${STATUS.map((s) => `<option value="${s.k}"${s.k === st ? " selected" : ""}>${s.l}</option>`).join("")}</select></span>`;
@@ -643,7 +769,7 @@ function renderProject(p, run) {
           ${a.name ? `<div class="row"><strong>${esc(a.name)}</strong></div>` : ""}
           ${a.email ? `<div class="row"><span class="mono" id="em-${esc(p.id)}">${esc(a.email)}</span><button class="linkcopy" data-act="copy" data-target="em-${esc(p.id)}">kopieren</button></div>` : ""}
           ${a.telefon ? `<div class="row"><span class="mono" id="tel-${esc(p.id)}">${esc(a.telefon)}</span><button class="linkcopy" data-act="copy" data-target="tel-${esc(p.id)}">kopieren</button></div>` : ""}
-        </div>` : `<p class="muted">Nicht angegeben.</p>`}</div>
+        </div>${emailOf(p) ? `<div style="display:grid;gap:8px;margin-top:6px">${mailBlock(p, false)}</div>` : ""}` : `<p class="muted">Nicht angegeben.</p>`}</div>
         <div class="blk">
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung öffnen ↗</a>` : `<span class="chip warn">Kein gültiger Link hinterlegt</span>`}<button class="btn" data-act="ptext" data-id="${esc(p.id)}" aria-expanded="${state.ptext.has(p.id)}">Als Text</button></div>
           ${state.ptext.has(p.id) ? `<div class="codebox ptext"><pre id="pt-${esc(p.id)}">${esc(projText(p, { fmt: "lang", contact: state.exp.contact }).join("\n"))}</pre><button class="btn" data-act="copy" data-target="pt-${esc(p.id)}">Kopieren</button></div>` : ""}
@@ -701,7 +827,11 @@ function renderPipeline() {
   const lanes = PIPE.map((k) => ({ s: STATUS.find((x) => x.k === k), items: state.projects.filter((p) => stOf(p.id) === k).sort(byScore) }));
   const total = lanes.reduce((n, l) => n + l.items.length, 0);
   return `<div style="display:grid;gap:16px">
-    <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "" : "Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
+    <div class="pipe-head">
+      <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "Ist beim Ansprechpartner eine E-Mail hinterlegt, öffnet „Mail an …“ eine vorausgefüllte Mail." : "Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
+      <button class="btn" data-act="mv-toggle" aria-expanded="${state.mvOpen}" aria-controls="mv-h">${state.mvOpen ? "Mailvorlage schließen" : "Mailvorlage bearbeiten"}</button>
+    </div>
+    ${state.mvOpen ? renderMailCfg() : ""}
     <div class="pipe">${lanes.map((l) => `<section class="lane" aria-label="${esc(l.s.l)}">
       <div class="lane-head"><h3>${esc(l.s.l)}</h3><span class="count">${l.items.length}</span></div>
       ${l.items.length ? l.items.map((p) => {
@@ -713,6 +843,7 @@ function renderPipeline() {
           <div class="meta">${esc((run && run.berater && run.berater.name) || "Recherche gelöscht")}${p.plattform ? ` · ${esc(p.plattform)}` : ""}${remoteOf(p) !== null ? ` · ${remoteOf(p)} % remote` : ""}</div>
           ${note ? `<div class="meta" style="color:var(--ink)">${esc(note)}</div>` : ""}
           <div class="row">${statusSelect(p.id)}${link ? `<a class="linkcopy" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung ↗</a>` : ""}</div>
+          ${mailBlock(p, true)}
         </article>`;
       }).join("") : `<div class="lane-empty">Nichts in diesem Stand.</div>`}
     </section>`).join("")}</div>
@@ -979,6 +1110,16 @@ document.addEventListener("click", (e) => {
   else if (act === "toggle") { state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderList(); }
   else if (act === "export-toggle") { state.exp.open = !state.exp.open; persist(); render(); }
   else if (act === "ptext") { state.ptext.has(id) ? state.ptext.delete(id) : state.ptext.add(id); renderList(); }
+  else if (act === "mail") {
+    // Let the link open first; re-rendering now would detach it before the browser follows it.
+    state.mailed.add(id);
+    setTimeout(() => (state.tab === "recherchen" ? renderList() : render()), 0);
+  }
+  else if (act === "mailtext") { state.mailText.has(id) ? state.mailText.delete(id) : state.mailText.add(id); state.tab === "recherchen" ? renderList() : render(); }
+  else if (act === "mark-sent") { saveStatus(id, { status: "gesendet" }); state.mailed.delete(id); toast("Status: Profil gesendet"); render(); }
+  else if (act === "mv-toggle") { state.mvOpen = !state.mvOpen; render(); }
+  else if (act === "mv-save") saveMailTpl();
+  else if (act === "mv-reset") { state.mvDraft = { ...DEFAULT_MAIL }; render(); }
   else if (act === "jump" || act === "open-in-run") jumpTo(id);
   else if (act === "copy") copyFrom(b);
   else if (act === "save-note") {
@@ -994,6 +1135,7 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const t = e.target;
   if (t.dataset.filter) { state.filters[t.dataset.filter] = t.value; persist(); renderList(); }
+  else if (t.id === "mv-app") { state.mailApp = t.value; persist(); render(); }
   else if (t.dataset.export) {
     const k = t.dataset.export;
     state.exp[k] = t.type === "checkbox" ? t.checked : t.value;
@@ -1016,6 +1158,11 @@ document.addEventListener("input", (e) => {
     const btn = t.closest(".note").querySelector('[data-act="save-note"]'); if (btn) btn.disabled = false;
   }
   else if (t.id === "import-json") { state.importText = t.value; }
+  else if (t.id === "mv-betreff" || t.id === "mv-text") {
+    state.mvDraft = state.mvDraft || mailTpl();
+    state.mvDraft[t.id === "mv-text" ? "text" : "betreff"] = t.value;
+    const b = document.querySelector('[data-act="mv-save"]'); if (b) b.disabled = false;
+  }
 });
 
 /* ---------- boot ---------- */
@@ -1035,6 +1182,7 @@ render();
     const m = {}; snap.docs.forEach((d) => { m[d.id] = d.data(); }); state.status = m; render();
   }, onErr);
   db.doc("meta/anbindung").onSnapshot((d) => { state.meta = d.exists ? d.data() : {}; if (state.tab === "anbindung") render(); }, onErr);
+  db.doc("meta/mailvorlage").onSnapshot((d) => { state.mailTpl = d.exists ? d.data() : {}; render(); }, onErr);
   try {
     const user = await window.claude.use("user");
     if (user) { const c = await user.can("data.write"); if (c === false) { state.canWrite = false; render(); } }
