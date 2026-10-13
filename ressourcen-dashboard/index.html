@@ -132,6 +132,29 @@ h1{font-weight:780;font-stretch:85%;font-size:1.6rem;line-height:1.05;letter-spa
 .field.search input{width:100%}
 .result-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .result-line h3{font-size:1.1rem;font-weight:720;font-stretch:90%}
+.rl-right{display:flex;align-items:center;gap:12px}
+
+/* text export */
+.export{padding:16px 18px;display:grid;gap:12px}
+.ex-controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.seg{display:inline-flex;gap:2px;background:var(--sunken);padding:3px;border-radius:9px;border:0;margin:0}
+.seg legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{padding:5px 12px;border-radius:7px;font-weight:600;font-size:.85rem;color:var(--muted);cursor:pointer}
+.seg input:checked + label{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.seg input:focus-visible + label{outline:2px solid var(--accent);outline-offset:1px}
+.check{display:inline-flex;align-items:center;gap:7px;font-size:.88rem;cursor:pointer}
+.check input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.check:has(input:disabled){opacity:.5;cursor:default}
+.ex-note{margin:0;font-size:.85rem;color:var(--muted)}
+.export .codebox pre{font-family:var(--f-body);font-size:.88rem;line-height:1.5;padding-right:120px;max-height:420px}
+.ptext{margin-top:10px}
+.ptext pre{font-family:var(--f-body)!important;font-size:.85rem!important;padding-right:96px!important}
+@media (max-width:600px){
+  .export .codebox,.ptext{display:flex;flex-direction:column-reverse;gap:8px}
+  .export .codebox .btn,.ptext .btn{position:static;align-self:flex-start}
+  .export .codebox pre,.ptext pre{padding-right:16px!important}
+}
 
 /* project rows */
 .plist{display:grid;gap:10px}
@@ -268,15 +291,17 @@ const state = {
   loaded: { runs: false, projects: false }, db: null, dbState: "loading", canWrite: true,
   filters: { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv", sort: "score" },
   open: new Set(), drafts: {}, importText: "", importMsg: null, confirmDel: null, busy: false,
+  exp: { open: false, fmt: "kurz", head: true, contact: false }, ptext: new Set(),
 };
 try {
   const s = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
   if (["recherchen", "pipeline", "anbindung"].includes(s.tab)) state.tab = s.tab;
   if (s.runId) state.runId = s.runId;
   if (s.filters) Object.assign(state.filters, s.filters, { q: "" });
+  if (s.exp) Object.assign(state.exp, s.exp);
 } catch (e) {}
 function persist() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ tab: state.tab, runId: state.runId, filters: { ...state.filters, q: "" } })); } catch (e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ tab: state.tab, runId: state.runId, filters: { ...state.filters, q: "" }, exp: state.exp })); } catch (e) {}
 }
 
 /* ---------- helpers ---------- */
@@ -495,6 +520,59 @@ function applyFilters(ps) {
   return out.sort(sorters[f.sort] || byScore);
 }
 
+/* ---------- plain-text export for forwarding ---------- */
+function projText(p, o) {
+  const link = safeUrl(p.link) || "Link fehlt";
+  if (o.fmt === "kurz") return [p.titel || "Ohne Titel", link];
+  const s = scoreOf(p); const r = remoteOf(p);
+  const lines = [p.titel || "Ohne Titel"];
+  const meta = [s !== null ? `Match ${fmtScore(s)}/10` : null, p.plattform, p.s4hana === true ? "S/4HANA" : null].filter(Boolean).join(" · ");
+  if (meta) lines.push(meta);
+  if (p.kunde) lines.push(`Kunde: ${p.kunde}`);
+  const ortHasRemote = r !== null && new RegExp(`\\b${r}\\s?%`).test(String(p.einsatzort || ""));
+  lines.push(`Ort: ${[p.einsatzort, ortHasRemote ? null : r === null ? "Remote-Anteil nicht genannt" : `${r} % remote`].filter(Boolean).join(" · ")}`);
+  const when = [p.start ? `Start ${parseDate(p.start) ? fmtDate(p.start) : p.start}` : null, p.laufzeit ? `Laufzeit ${p.laufzeit}` : null].filter(Boolean).join(" · ");
+  if (when) lines.push(when);
+  if (p.passung) lines.push(`Passung: ${p.passung}`);
+  if (o.contact) {
+    const a = p.ansprechpartner || {};
+    const c = [a.name, a.email, a.telefon].filter(Boolean).join(", ");
+    if (c) lines.push(`Kontakt: ${c}`);
+  }
+  lines.push(`Link: ${link}`);
+  return lines;
+}
+function runText(run, list, o) {
+  const b = run.berater || {}; const out = [];
+  if (o.head) {
+    out.push(`SAP-Projekte für ${b.name || "Berater"}${b.rolle ? `, ${b.rolle}` : ""}`);
+    out.push([run.erstelltAm ? `Recherche vom ${fmtDate(run.erstelltAm)}` : null, run.zeitraum ? `Zeitraum: ${run.zeitraum}` : null,
+      `${list.length} Projekt${list.length === 1 ? "" : "e"}`].filter(Boolean).join(" · "));
+    const z = run.zusammenfassung || {};
+    if (o.fmt !== "kurz" && z.fazit) out.push(`Fazit: ${z.fazit}`);
+    out.push("");
+  }
+  list.forEach((p, i) => {
+    const t = projText(p, o);
+    out.push(`${i + 1}. ${t[0]}`, ...t.slice(1).map((l) => "   " + l));
+    if (o.fmt !== "kurz" || i < list.length - 1) out.push("");
+  });
+  return out.join("\n").trimEnd();
+}
+function renderExport(run, shown) {
+  const o = state.exp;
+  const radio = (v, l) => `<input type="radio" name="ex-fmt" id="ex-fmt-${v}" value="${v}" data-export="fmt"${o.fmt === v ? " checked" : ""}><label for="ex-fmt-${v}">${l}</label>`;
+  return `<div class="panel export">
+    <div class="ex-controls">
+      <fieldset class="seg"><legend>Format</legend>${radio("kurz", "Titel + Link")}${radio("lang", "Grobübersicht")}</fieldset>
+      <label class="check"><input type="checkbox" id="ex-head" data-export="head"${o.head ? " checked" : ""}> Kopfzeile mit Berater</label>
+      <label class="check"><input type="checkbox" id="ex-contact" data-export="contact"${o.contact ? " checked" : ""}${o.fmt === "kurz" ? " disabled" : ""}> Ansprechpartner</label>
+    </div>
+    <p class="ex-note">${shown.length ? `Enthält die ${shown.length === 1 ? "eine Ausschreibung" : `${shown.length} Ausschreibungen`}, die gerade in der Liste stehen, in derselben Reihenfolge. Was mitkommt, steuerst du über die Filter.` : "Gerade steht kein Projekt in der Liste. Lockere die Filter, dann erscheint hier der Text."}</p>
+    ${shown.length ? `<div class="codebox"><pre id="export-text">${esc(runText(run, shown, o))}</pre><button class="btn primary" data-act="copy" data-target="export-text">Text kopieren</button></div>` : ""}
+  </div>`;
+}
+
 function statusSelect(pid) {
   const st = stOf(pid);
   return `<span class="st" data-st="${st}"><select aria-label="Bearbeitungsstand" data-status-for="${esc(pid)}"${state.canWrite && state.db ? "" : " disabled"}>${STATUS.map((s) => `<option value="${s.k}"${s.k === st ? " selected" : ""}>${s.l}</option>`).join("")}</select></span>`;
@@ -566,7 +644,10 @@ function renderProject(p, run) {
           ${a.email ? `<div class="row"><span class="mono" id="em-${esc(p.id)}">${esc(a.email)}</span><button class="linkcopy" data-act="copy" data-target="em-${esc(p.id)}">kopieren</button></div>` : ""}
           ${a.telefon ? `<div class="row"><span class="mono" id="tel-${esc(p.id)}">${esc(a.telefon)}</span><button class="linkcopy" data-act="copy" data-target="tel-${esc(p.id)}">kopieren</button></div>` : ""}
         </div>` : `<p class="muted">Nicht angegeben.</p>`}</div>
-        <div class="blk">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung öffnen ↗</a>` : `<span class="chip warn">Kein gültiger Link hinterlegt</span>`}</div>
+        <div class="blk">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung öffnen ↗</a>` : `<span class="chip warn">Kein gültiger Link hinterlegt</span>`}<button class="btn" data-act="ptext" data-id="${esc(p.id)}" aria-expanded="${state.ptext.has(p.id)}">Als Text</button></div>
+          ${state.ptext.has(p.id) ? `<div class="codebox ptext"><pre id="pt-${esc(p.id)}">${esc(projText(p, { fmt: "lang", contact: state.exp.contact }).join("\n"))}</pre><button class="btn" data-act="copy" data-target="pt-${esc(p.id)}">Kopieren</button></div>` : ""}
+        </div>
       </div>
     </div>
   </article>`;
@@ -579,6 +660,8 @@ function renderList() {
   const el = document.getElementById("plist");
   const cnt = document.getElementById("pcount");
   if (cnt) cnt.textContent = shown.length === ps.length ? `${ps.length} Projekte` : `${shown.length} von ${ps.length} Projekten`;
+  const ex = document.getElementById("export");
+  if (ex) ex.innerHTML = state.exp.open ? renderExport(run, shown) : "";
   if (!el) return;
   el.innerHTML = shown.length ? shown.map((p) => renderProject(p, run)).join("")
     : `<div class="panel empty"><p>${ps.length ? "Kein Projekt passt zu den Filtern." : "Diese Recherche enthält keine Projekte."}</p>${ps.length ? `<button class="btn" data-act="reset-filters">Filter zurücksetzen</button>` : ""}</div>`;
@@ -604,8 +687,9 @@ function renderRecherchen() {
       ${renderProfile(run)}
       ${renderSummary(run, ps)}
       <section aria-label="Projekte" style="display:grid;gap:12px">
-        <div class="result-line"><h3>Projekte</h3><span class="muted mono" id="pcount"></span></div>
+        <div class="result-line"><h3>Projekte</h3><div class="rl-right"><span class="muted mono" id="pcount"></span><button class="btn" data-act="export-toggle" aria-expanded="${state.exp.open}" aria-controls="export">${state.exp.open ? "Text ausblenden" : "Als Text weiterleiten"}</button></div></div>
         ${renderFilters(ps)}
+        <div id="export"></div>
         <div class="plist" id="plist"></div>
       </section>` : `<div class="skel" style="height:180px"></div><div class="skel" style="height:140px"></div>`}
     </div></div>`;
@@ -893,6 +977,8 @@ document.addEventListener("click", (e) => {
   if (act === "tab") { state.tab = b.dataset.tab; persist(); render(); window.scrollTo({ top: 0 }); }
   else if (act === "run") { state.runId = id; state.confirmDel = null; persist(); render(); }
   else if (act === "toggle") { state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderList(); }
+  else if (act === "export-toggle") { state.exp.open = !state.exp.open; persist(); render(); }
+  else if (act === "ptext") { state.ptext.has(id) ? state.ptext.delete(id) : state.ptext.add(id); renderList(); }
   else if (act === "jump" || act === "open-in-run") jumpTo(id);
   else if (act === "copy") copyFrom(b);
   else if (act === "save-note") {
@@ -908,6 +994,12 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const t = e.target;
   if (t.dataset.filter) { state.filters[t.dataset.filter] = t.value; persist(); renderList(); }
+  else if (t.dataset.export) {
+    const k = t.dataset.export;
+    state.exp[k] = t.type === "checkbox" ? t.checked : t.value;
+    persist(); renderList();
+    const again = document.getElementById(t.id); if (again) again.focus({ preventScroll: true });
+  }
   else if (t.dataset.statusFor) {
     const pid = t.dataset.statusFor;
     saveStatus(pid, { status: t.value });
