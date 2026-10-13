@@ -1,0 +1,952 @@
+<title>SAP Projektradar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: left rail of research runs (consultant + date) · right pane = consultant profile → management summary → filter bar → projects ranked by matching score */
+:root{
+  --bg:#F3F4F7; --surface:#FFFFFF; --sunken:#E8EAF0; --ink:#161A26; --muted:#5A6075; --line:#D8DBE5;
+  --accent:#2B45C4; --accent-ink:#FFFFFF; --accent-soft:#E2E7FB;
+  --good:#1D7748; --good-soft:#DCF0E4; --warn:#9A5B00; --warn-soft:#FAEAD2; --bad:#AD3434; --bad-soft:#F6DEDE;
+  --shadow:0 1px 2px rgb(10 14 30 / .06), 0 2px 8px rgb(10 14 30 / .04);
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F121A; --surface:#171B26; --sunken:#1F2433; --ink:#E6E8F0; --muted:#9BA2B8; --line:#2B3144;
+  --accent:#8FA1FF; --accent-ink:#0F121A; --accent-soft:#222A4C;
+  --good:#5FCB91; --good-soft:#15301F; --warn:#E9AA4E; --warn-soft:#352710; --bad:#EF7E7E; --bad-soft:#3A1D1E;
+  --shadow:0 1px 2px rgb(0 0 0 / .3); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0F121A; --surface:#171B26; --sunken:#1F2433; --ink:#E6E8F0; --muted:#9BA2B8; --line:#2B3144;
+  --accent:#8FA1FF; --accent-ink:#0F121A; --accent-soft:#222A4C;
+  --good:#5FCB91; --good-soft:#15301F; --warn:#E9AA4E; --warn-soft:#352710; --bad:#EF7E7E; --bad-soft:#3A1D1E;
+  --shadow:0 1px 2px rgb(0 0 0 / .3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,select,input,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+.app{max-width:1320px;margin:0 auto;padding-inline:24px;padding-block:20px 56px}
+@media (max-width:560px){.app{padding-inline:16px}}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand svg{width:38px;height:38px;color:var(--accent);flex:none}
+h1{font-weight:780;font-stretch:85%;font-size:1.6rem;line-height:1.05;letter-spacing:-.005em}
+.sub{margin:3px 0 0;color:var(--muted);font-size:.875rem}
+.tabs{display:flex;gap:2px;background:var(--sunken);padding:3px;border-radius:10px}
+.tabs button{border:0;background:transparent;padding:7px 14px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:600;font-size:.9rem;display:flex;gap:6px;align-items:center}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.count{font:500 .72rem/1 var(--f-data);background:var(--accent-soft);color:var(--accent);padding:3px 6px;border-radius:999px}
+
+/* layout */
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr);gap:18px}}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 32px);overflow:auto}
+.rail-label{font:600 .7rem/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:4px 12px 8px}
+@media (max-width:900px){
+  .rail{position:static;flex-direction:row;overflow-x:auto;max-height:none;padding-bottom:6px;scroll-snap-type:x proximity}
+  .rail-label{display:none}
+  .run-btn{min-width:230px;scroll-snap-align:start}
+}
+.run-btn{display:grid;gap:1px;text-align:left;padding:10px 12px;border:1px solid transparent;border-radius:10px;background:transparent;cursor:pointer}
+.run-btn:hover{background:var(--surface)}
+.run-btn[aria-current="true"]{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
+.run-name{font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.run-role{color:var(--muted);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-meta{display:flex;gap:10px;align-items:center;font:400 .75rem/1.6 var(--f-data);color:var(--muted);margin-top:4px}
+.run-meta .score-pill{margin-left:auto}
+
+/* shared bits */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.eyebrow{font:600 .7rem/1.2 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.tag-demo{font:600 .66rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:var(--warn-soft);color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;line-height:1.2;padding:3px 8px;border-radius:6px;background:var(--sunken);color:var(--ink);white-space:nowrap}
+.chip.mod{font:500 .74rem/1.2 var(--f-data);background:var(--accent-soft);color:var(--accent)}
+.chip.s4{font-weight:700;background:var(--accent-soft);color:var(--accent)}
+.chip.ok{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;font-size:.875rem;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--sunken)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.score-pill{font:600 .78rem/1 var(--f-data);padding:4px 7px;border-radius:6px;font-variant-numeric:tabular-nums}
+.tone-good{background:var(--good-soft);color:var(--good)}
+.tone-mid{background:var(--accent-soft);color:var(--accent)}
+.tone-low{background:var(--warn-soft);color:var(--warn)}
+
+/* profile */
+.main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.profile{padding:20px 22px;display:grid;gap:16px}
+.profile-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start}
+.profile h2{font-size:1.65rem;font-weight:760;font-stretch:88%;line-height:1.1}
+.profile .role{margin:4px 0 0;color:var(--muted);font-size:1rem}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px 20px;margin:0}
+.facts div{min-width:0}
+.facts dt{font:600 .68rem/1.3 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}
+.demo-note{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-size:.9rem}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem}
+
+/* summary */
+.summary{display:grid;grid-template-columns:minmax(170px,.75fr) repeat(3,minmax(0,1fr));gap:0}
+.summary > section{padding:18px 20px;min-width:0}
+.summary > section + section{border-left:1px solid var(--line)}
+@media (max-width:1100px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.summary > section:nth-child(3){border-left:0}.summary > section:nth-child(n+3){border-top:1px solid var(--line)}}
+@media (max-width:600px){.summary{grid-template-columns:minmax(0,1fr)}.summary > section + section{border-left:0;border-top:1px solid var(--line)}}
+.big{font:600 2.6rem/1 var(--f-data);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.big-sub{margin:8px 0 0;font-size:.85rem;color:var(--muted);display:grid;gap:2px}
+.toplist{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:rank}
+.toplist button{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:baseline;text-align:left;border:0;background:transparent;padding:4px 6px;margin:0 -6px;border-radius:8px;cursor:pointer;width:calc(100% + 12px)}
+.toplist button:hover{background:var(--sunken)}
+.toplist .rank{font:500 .75rem/1 var(--f-data);color:var(--muted)}
+.toplist .t{font-weight:600;font-size:.92rem;line-height:1.3}
+.plain{margin:0;padding-left:18px;display:grid;gap:6px;font-size:.92rem;line-height:1.35}
+.risks{list-style:none;padding:0}
+.risks li{display:grid;grid-template-columns:14px minmax(0,1fr);gap:8px}
+.risks li::before{content:"";width:8px;height:8px;margin-top:6px;border-radius:2px;background:var(--warn);transform:rotate(45deg)}
+.fazit{padding:14px 20px;border-top:1px solid var(--line);font-size:.95rem;grid-column:1/-1}
+.alts{padding:16px 20px;border-top:1px solid var(--line);grid-column:1/-1}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.field{display:grid;gap:4px;min-width:0}
+.field label{font:600 .68rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select{height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 10px;min-width:0}
+.field.search{flex:1 1 220px}
+.field.search input{width:100%}
+.result-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.result-line h3{font-size:1.1rem;font-weight:720;font-stretch:90%}
+
+/* project rows */
+.plist{display:grid;gap:10px}
+.proj{background:var(--surface);border:1px solid var(--line);border-radius:12px;scroll-margin-top:16px}
+.proj.is-out .proj-title{text-decoration:line-through;color:var(--muted)}
+.proj-head{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:18px;padding:16px 18px;align-items:start}
+@media (max-width:680px){.proj-head{grid-template-columns:58px minmax(0,1fr);gap:12px;padding:14px}.score .num small{display:none}.proj-side{grid-column:1/-1;flex-direction:row!important;justify-content:space-between;align-items:center!important}}
+.score{display:grid;gap:6px}
+.score .num{font:600 1.55rem/1 var(--f-data);font-variant-numeric:tabular-nums}
+.score .num small{font-size:.7rem;color:var(--muted);font-weight:400}
+.segs{display:flex;gap:2px}
+.segs i{flex:1;height:6px;border-radius:1px;background:var(--sunken)}
+.score.tone-good{background:none}.score.tone-mid{background:none}.score.tone-low{background:none}
+.score.tone-good .num{color:var(--good)}.score.tone-good .segs i.on{background:var(--good)}
+.score.tone-mid .num{color:var(--accent)}.score.tone-mid .segs i.on{background:var(--accent)}
+.score.tone-low .num{color:var(--warn)}.score.tone-low .segs i.on{background:var(--warn)}
+.proj-title{border:0;background:none;padding:0;text-align:left;cursor:pointer;font:700 1.05rem/1.3 var(--f-body);color:var(--ink)}
+.proj-title:hover{color:var(--accent)}
+.proj-sub{margin:3px 0 10px;color:var(--muted);font-size:.9rem}
+.proj-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.pub{font:400 .75rem/1 var(--f-data);color:var(--muted);white-space:nowrap}
+.rm{display:inline-flex;align-items:center;gap:6px}
+.rm-bar{position:relative;width:46px;height:6px;border-radius:3px;background:color-mix(in srgb,currentColor 20%,transparent)}
+.rm-bar i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:currentColor}
+.rm-bar b{position:absolute;left:70%;top:-3px;bottom:-3px;width:1.5px;background:var(--ink);opacity:.55}
+.proj-body{border-top:1px solid var(--line);padding:18px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px}
+@media (max-width:780px){.proj-body{grid-template-columns:minmax(0,1fr);gap:20px}}
+.proj-body p{margin:0;max-width:68ch}
+.proj-body .blk{display:grid;gap:6px}
+.proj-body .blk + .blk{margin-top:18px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;font-size:.9rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.contact{display:grid;gap:4px;font-size:.92rem}
+.contact .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.linkcopy{border:0;background:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:.78rem;text-decoration:underline}
+.note textarea{width:100%;min-height:76px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 10px;font-size:.9rem}
+.note .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:.78rem;color:var(--muted)}
+
+/* status select */
+.st{position:relative;display:inline-flex;border-radius:999px;background:var(--st-bg,var(--sunken));color:var(--st-fg,var(--ink))}
+.st select{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font-weight:600;font-size:.8rem;padding:5px 26px 5px 11px;border-radius:999px;cursor:pointer}
+.st select:disabled{cursor:default}
+.st::after{content:"";position:absolute;right:11px;top:50%;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.st option{background:var(--surface);color:var(--ink)}
+.st[data-st="neu"]{--st-bg:var(--sunken);--st-fg:var(--muted)}
+.st[data-st="vorgemerkt"]{--st-bg:var(--accent-soft);--st-fg:var(--accent)}
+.st[data-st="gesendet"]{--st-bg:var(--accent);--st-fg:var(--accent-ink)}
+.st[data-st="gespraech"]{--st-bg:var(--warn-soft);--st-fg:var(--warn)}
+.st[data-st="zusage"]{--st-bg:var(--good);--st-fg:var(--surface)}
+.st[data-st="verworfen"]{--st-bg:var(--bad-soft);--st-fg:var(--bad)}
+
+/* empty + info */
+.empty{padding:32px 28px;display:grid;gap:14px;justify-items:start}
+.empty h2{font-size:1.35rem;font-weight:740;font-stretch:90%}
+.empty p{margin:0;max-width:62ch;color:var(--muted)}
+.steps{margin:0;padding-left:20px;display:grid;gap:6px;max-width:66ch}
+.skel{height:58px;border-radius:10px;background:var(--sunken);opacity:.7}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:1100px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.pipe{grid-template-columns:minmax(0,1fr)}}
+.lane{display:grid;gap:8px;min-width:0}
+.lane-head{display:flex;justify-content:space-between;align-items:center;padding:0 2px}
+.lane-head h3{font-size:1rem;font-weight:720;font-stretch:90%}
+.card{padding:12px 14px;display:grid;gap:8px}
+.card .t{font-weight:700;line-height:1.3;border:0;background:none;padding:0;text-align:left;cursor:pointer}
+.card .t:hover{color:var(--accent)}
+.card .meta{font-size:.82rem;color:var(--muted)}
+.card .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.lane-empty{border:1px dashed var(--line);border-radius:12px;padding:14px;font-size:.85rem;color:var(--muted)}
+
+/* anbindung */
+.conn{display:grid;gap:20px}
+.conn-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:900px){.conn-grid{grid-template-columns:minmax(0,1fr)}}
+.conn .panel{padding:20px 22px;display:grid;gap:12px;align-content:start;min-width:0}
+.conn h2{font-size:1.2rem;font-weight:740;font-stretch:90%}
+.conn p{margin:0;max-width:66ch}
+.codebox{position:relative;min-width:0}
+.codebox pre{margin:0;max-height:340px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font:400 .78rem/1.55 var(--f-data);white-space:pre-wrap;overflow-wrap:anywhere}
+.codebox .btn{position:absolute;top:8px;right:8px;padding:4px 10px;font-size:.78rem}
+.urlrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.urlrow code{font:400 .82rem var(--f-data);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;overflow-wrap:anywhere;min-width:0}
+#import-json{width:100%;min-height:180px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px 14px;font:400 .8rem/1.5 var(--f-data)}
+.msg{font-size:.9rem;padding:8px 12px;border-radius:8px}
+.msg.ok{background:var(--good-soft);color:var(--good)}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.schema{width:100%;border-collapse:collapse;font-size:.86rem}
+.schema th,.schema td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.schema th{font:600 .68rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.schema td:first-child{font-family:var(--f-data);font-size:.8rem;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:.9rem;box-shadow:var(--shadow);z-index:10;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: no-preference){.proj-body{animation:open .16s ease-out}@keyframes open{from{opacity:.4;transform:translateY(-3px)}to{opacity:1;transform:none}}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.2" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".3"/><circle cx="16" cy="16" r="9.2" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><circle cx="16" cy="16" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16 L16 1.8 A14.2 14.2 0 0 1 28.3 8.9 Z" fill="currentColor" opacity=".22"/><circle cx="22.6" cy="8.3" r="2.1" fill="currentColor"/></svg>
+      <div>
+        <h1>SAP Projektradar</h1>
+        <p class="sub">Freelance-Einsätze für verfügbare SAP-Berater</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Bereiche" id="tabs"></nav>
+  </header>
+  <div id="view"></div>
+</div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+"use strict";
+
+const STATUS = [
+  { k: "neu", l: "Neu" },
+  { k: "vorgemerkt", l: "Vorgemerkt" },
+  { k: "gesendet", l: "Profil gesendet" },
+  { k: "gespraech", l: "Im Gespräch" },
+  { k: "zusage", l: "Zusage" },
+  { k: "verworfen", l: "Verworfen" },
+];
+const PIPE = ["vorgemerkt", "gesendet", "gespraech", "zusage"];
+const LS_KEY = "sap-projektradar:v1";
+const DAY = 864e5;
+
+const state = {
+  tab: "recherchen", runId: null,
+  runs: [], projects: [], status: {}, meta: {},
+  loaded: { runs: false, projects: false }, db: null, dbState: "loading", canWrite: true,
+  filters: { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv", sort: "score" },
+  open: new Set(), drafts: {}, importText: "", importMsg: null, confirmDel: null, busy: false,
+};
+try {
+  const s = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+  if (["recherchen", "pipeline", "anbindung"].includes(s.tab)) state.tab = s.tab;
+  if (s.runId) state.runId = s.runId;
+  if (s.filters) Object.assign(state.filters, s.filters, { q: "" });
+} catch (e) {}
+function persist() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ tab: state.tab, runId: state.runId, filters: { ...state.filters, q: "" } })); } catch (e) {}
+}
+
+/* ---------- helpers ---------- */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const arr = (x) => Array.isArray(x) ? x.filter((v) => v !== null && v !== undefined && v !== "") : (x === null || x === undefined || x === "" ? [] : [x]);
+const num = (v) => { if (v === null || v === undefined || v === "") return null; const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", ".")); return Number.isFinite(n) ? n : null; };
+const safeUrl = (u) => { try { const x = new URL(String(u)); return x.protocol === "https:" || x.protocol === "http:" ? x.href : null; } catch (e) { return null; } };
+const scoreOf = (p) => { const n = num(p.score); return n === null ? null : Math.max(0, Math.min(10, n)); };
+const remoteOf = (p) => { const n = num(p.remoteAnteil); return n === null ? null : Math.max(0, Math.min(100, n)); };
+const tone = (s) => s === null ? "low" : s >= 8 ? "good" : s >= 6 ? "mid" : "low";
+const fmtScore = (s) => s === null ? "–" : s.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const listOf = (x) => typeof x === "string" ? x.split(/[,;/]\s*/).map((s) => s.trim()).filter(Boolean) : arr(x).map(String);
+
+function parseDate(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+  return null;
+}
+function today() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function fmtDate(v) {
+  const d = v instanceof Date ? v : (parseDate(v) || (v && !isNaN(Date.parse(v)) ? new Date(v) : null));
+  return d ? d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : (v ? String(v) : "–");
+}
+function relDay(v) {
+  const d = parseDate(v); if (!d) return v ? String(v) : "";
+  const n = Math.round((today() - d) / DAY);
+  if (n <= 0) return "heute"; if (n === 1) return "gestern"; return `vor ${n} Tagen`;
+}
+function slug(s) {
+  return String(s || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "x";
+}
+const cleanId = (s) => { if (!s) return null; const t = String(s).replace(/[^A-Za-z0-9_\-.~:@+]/g, "-").slice(0, 180); return /^\.{1,2}$/.test(t) || !t ? null : t; };
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+const runById = (id) => state.runs.find((r) => r.id === id) || null;
+const projectsOf = (id) => state.projects.filter((p) => p.rechercheId === id);
+const stOf = (pid) => (state.status[pid] && state.status[pid].status) || "neu";
+const runsSorted = () => [...state.runs].sort((a, b) => String(b.erstelltAm || "").localeCompare(String(a.erstelltAm || "")) || a.id.localeCompare(b.id));
+const byScore = (a, b) => (scoreOf(b) ?? -1) - (scoreOf(a) ?? -1) || String(a.id).localeCompare(String(b.id));
+
+function startFit(p, run) {
+  const av = parseDate(run && run.berater && run.berater.verfuegbarAb);
+  if (!av) return null;
+  const st = parseDate(p.start);
+  const asap = /asap|sofort|zeitnah|immediately|umgehend/i.test(String(p.start || ""));
+  if (st) {
+    return (av - st) / DAY > 14
+      ? { ok: false, text: `Start ${fmtDate(st)} vor Verfügbarkeit` }
+      : { ok: true, text: "Start passt" };
+  }
+  if (asap) {
+    return (av - today()) / DAY > 14
+      ? { ok: false, text: `ASAP-Start, verfügbar erst ${fmtDate(av)}` }
+      : { ok: true, text: "ASAP passt" };
+  }
+  return null;
+}
+
+function toast(text) {
+  const t = document.getElementById("toast");
+  t.textContent = text; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2600);
+}
+function dbErrorText(e) {
+  const c = e && e.code;
+  if (c === "invalid_argument") return "Speichern nicht möglich: keine Schreibrechte oder ungültige Daten.";
+  if (c === "quota_exceeded") return "Speicher voll. Lösche alte Recherchen und versuche es erneut.";
+  if (c === "resource_exhausted") return "Zu viele Änderungen auf einmal. Bitte kurz warten.";
+  return "Speichern fehlgeschlagen. Bitte erneut versuchen.";
+}
+
+/* ---------- render: tabs ---------- */
+function renderTabs() {
+  const pipeCount = state.projects.filter((p) => PIPE.includes(stOf(p.id))).length;
+  const tabs = [
+    ["recherchen", "Recherchen", state.runs.length],
+    ["pipeline", "Pipeline", pipeCount],
+    ["anbindung", "Anbindung", null],
+  ];
+  document.getElementById("tabs").innerHTML = tabs.map(([k, l, n]) =>
+    `<button role="tab" id="tab-${k}" aria-selected="${state.tab === k}" data-act="tab" data-tab="${k}">${l}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
+}
+
+/* ---------- render: recherchen ---------- */
+function renderRail() {
+  const runs = runsSorted();
+  if (!state.loaded.runs) return `<aside class="rail"><div class="skel"></div><div class="skel"></div><div class="skel"></div></aside>`;
+  return `<aside class="rail" aria-label="Recherchen"><div class="rail-label">Recherchen · neueste zuerst</div>${runs.map((r) => {
+    const ps = projectsOf(r.id); const b = r.berater || {};
+    const top = ps.reduce((m, p) => Math.max(m, scoreOf(p) ?? 0), 0);
+    return `<button class="run-btn" data-act="run" data-id="${esc(r.id)}" aria-current="${r.id === state.runId}">
+      <span class="run-name">${esc(b.name || "Ohne Namen")}${r.beispiel ? `<span class="tag-demo">Beispiel</span>` : ""}</span>
+      <span class="run-role">${esc(b.rolle || "")}</span>
+      <span class="run-meta"><span>${esc(fmtDate(r.erstelltAm))}</span><span>${ps.length} Proj.</span>${ps.length ? `<span class="score-pill tone-${tone(top)}">${fmtScore(top)}</span>` : ""}</span>
+    </button>`;
+  }).join("")}</aside>`;
+}
+
+function renderProfile(run) {
+  const b = run.berater || {};
+  const mods = listOf(b.module);
+  const facts = [
+    ["Seniorität", b.seniority], ["Verfügbar ab", b.verfuegbarAb ? fmtDate(b.verfuegbarAb) : null], ["Auslastung", b.auslastung],
+    ["Remote-Wunsch", b.remote], ["Region", b.region], ["Zeitraum", run.zeitraum],
+    ["Recherche vom", run.erstelltAm ? new Date(run.erstelltAm).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null],
+    ["Plattformen", listOf(run.plattformen).join(", ")],
+  ].filter(([, v]) => v);
+  const confirming = state.confirmDel === run.id;
+  return `<section class="panel profile" aria-label="Beraterprofil">
+    ${run.beispiel ? `<div class="demo-note"><span>Beispieldaten zur Ansicht. Diese Recherche ist erfunden und kann gelöscht werden, sobald echte Ergebnisse da sind.</span></div>` : ""}
+    <div class="profile-head">
+      <div>
+        <p class="eyebrow">Beraterprofil</p>
+        <h2>${esc(b.name || "Ohne Namen")}</h2>
+        <p class="role">${esc(b.rolle || "")}</p>
+      </div>
+      ${state.canWrite && state.db ? (confirming
+        ? `<div class="confirm"><span>Recherche mit ${projectsOf(run.id).length} Projekten löschen?</span><button class="btn danger" data-act="del-run" data-id="${esc(run.id)}"${state.busy ? " disabled" : ""}>Endgültig löschen</button><button class="btn ghost" data-act="del-cancel">Abbrechen</button></div>`
+        : `<button class="btn ghost" data-act="del-ask" data-id="${esc(run.id)}">Recherche löschen</button>`) : ""}
+    </div>
+    ${mods.length ? `<div class="chips" aria-label="Module">${mods.map((m) => `<span class="chip mod">${esc(m)}</span>`).join("")}</div>` : ""}
+    ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+  </section>`;
+}
+
+function resolveRefs(list, ps) {
+  return arr(list).map((x) => {
+    const s = String(x);
+    const p = ps.find((q) => q.id === s) || ps.find((q) => String(q.titel || "").trim().toLowerCase() === s.trim().toLowerCase());
+    return p ? { p } : { text: s };
+  });
+}
+function refItem(r, i, ranked) {
+  if (r.p) {
+    const s = scoreOf(r.p);
+    return `<li><button data-act="jump" data-id="${esc(r.p.id)}">${ranked ? `<span class="rank">${i + 1}</span>` : ""}<span class="score-pill tone-${tone(s)}">${fmtScore(s)}</span><span class="t">${esc(r.p.titel || "Ohne Titel")}</span></button></li>`;
+  }
+  return `<li><span class="t">${esc(r.text)}</span></li>`;
+}
+
+function renderSummary(run, ps) {
+  const z = run.zusammenfassung || {};
+  const remoteOk = ps.filter((p) => (remoteOf(p) ?? -1) >= 70).length;
+  const remoteNg = ps.filter((p) => remoteOf(p) === null).length;
+  const s4 = ps.filter((p) => p.s4hana === true).length;
+  let top = resolveRefs(z.top3, ps);
+  if (!top.length) top = [...ps].sort(byScore).slice(0, 3).map((p) => ({ p }));
+  const chances = resolveRefs(z.hoheErfolgswahrscheinlichkeit, ps);
+  const risks = arr(z.risiken);
+  const alts = arr(run.alternativen);
+  return `<section class="panel summary" aria-label="Management-Zusammenfassung">
+    <section>
+      <p class="eyebrow">Gefunden</p>
+      <div class="big">${ps.length}</div>
+      <div class="big-sub"><span>${remoteOk} mit ≥ 70 % Remote</span><span>${remoteNg} ohne Remote-Angabe</span><span>${s4} S/4HANA</span></div>
+    </section>
+    <section>
+      <p class="eyebrow">Top-3-Matches</p>
+      ${top.length ? `<ol class="toplist">${top.slice(0, 3).map((r, i) => refItem(r, i, true)).join("")}</ol>` : `<p class="muted">Keine Treffer.</p>`}
+    </section>
+    <section>
+      <p class="eyebrow">Hohe Erfolgschance</p>
+      ${chances.length ? `<ul class="toplist">${chances.map((r, i) => refItem(r, i, false)).join("")}</ul>` : `<p class="muted">Keine Angabe.</p>`}
+    </section>
+    <section>
+      <p class="eyebrow">Risiken</p>
+      ${risks.length ? `<ul class="plain risks">${risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : `<p class="muted">Keine genannt.</p>`}
+    </section>
+    ${z.fazit ? `<div class="fazit">${esc(z.fazit)}</div>` : ""}
+    ${alts.length || !ps.length ? `<div class="alts"><p class="eyebrow">Alternative Suchbegriffe, Module und Rollen</p>${alts.length ? `<div class="chips">${alts.map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</div>` : `<p class="muted">Keine Vorschläge hinterlegt.</p>`}</div>` : ""}
+  </section>`;
+}
+
+function renderFilters(ps) {
+  const f = state.filters;
+  const plats = [...new Set(ps.map((p) => p.plattform).filter(Boolean))].sort();
+  const opt = (v, l, cur) => `<option value="${esc(v)}"${String(cur) === String(v) ? " selected" : ""}>${esc(l)}</option>`;
+  return `<div class="filters" role="search">
+    <div class="field search"><label for="f-q">Suche</label><input id="f-q" type="search" placeholder="Titel, Kunde, Skill …" value="${esc(f.q)}" autocomplete="off"></div>
+    <div class="field"><label for="f-min">Score</label><select id="f-min" data-filter="min">${[["0", "Alle"], ["6", "ab 6"], ["7", "ab 7"], ["8", "ab 8"], ["9", "ab 9"]].map(([v, l]) => opt(v, l, f.min)).join("")}</select></div>
+    <div class="field"><label for="f-remote">Remote</label><select id="f-remote" data-filter="remote">${[["alle", "Alle"], ["ok", "≥ 70 %"], ["ng", "Nicht genannt"]].map(([v, l]) => opt(v, l, f.remote)).join("")}</select></div>
+    <div class="field"><label for="f-plattform">Plattform</label><select id="f-plattform" data-filter="plattform">${opt("alle", "Alle", f.plattform)}${plats.map((p) => opt(p, p, f.plattform)).join("")}</select></div>
+    <div class="field"><label for="f-status">Status</label><select id="f-status" data-filter="status">${opt("aktiv", "Ohne verworfene", f.status)}${opt("alle", "Alle", f.status)}${STATUS.map((s) => opt(s.k, s.l, f.status)).join("")}</select></div>
+    <div class="field"><label for="f-sort">Sortierung</label><select id="f-sort" data-filter="sort">${[["score", "Matching Score"], ["datum", "Neueste zuerst"], ["remote", "Remote-Anteil"]].map(([v, l]) => opt(v, l, f.sort)).join("")}</select></div>
+  </div>`;
+}
+
+function applyFilters(ps) {
+  const f = state.filters; const q = f.q.trim().toLowerCase(); const min = +f.min || 0;
+  const out = ps.filter((p) => {
+    if ((scoreOf(p) ?? 0) < min) return false;
+    const r = remoteOf(p);
+    if (f.remote === "ok" && !(r !== null && r >= 70)) return false;
+    if (f.remote === "ng" && r !== null) return false;
+    if (f.plattform !== "alle" && (p.plattform || "") !== f.plattform) return false;
+    const st = stOf(p.id);
+    if (f.status === "aktiv" && st === "verworfen") return false;
+    if (f.status !== "aktiv" && f.status !== "alle" && st !== f.status) return false;
+    if (q) {
+      const hay = [p.titel, p.kunde, p.einsatzort, p.passung, p.plattform, ...arr(p.anforderungen)].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const dv = (p) => { const d = parseDate(p.veroeffentlicht); return d ? +d : 0; };
+  const sorters = {
+    score: byScore,
+    datum: (a, b) => dv(b) - dv(a) || byScore(a, b),
+    remote: (a, b) => (remoteOf(b) ?? -1) - (remoteOf(a) ?? -1) || byScore(a, b),
+  };
+  return out.sort(sorters[f.sort] || byScore);
+}
+
+function statusSelect(pid) {
+  const st = stOf(pid);
+  return `<span class="st" data-st="${st}"><select aria-label="Bearbeitungsstand" data-status-for="${esc(pid)}"${state.canWrite && state.db ? "" : " disabled"}>${STATUS.map((s) => `<option value="${s.k}"${s.k === st ? " selected" : ""}>${s.l}</option>`).join("")}</select></span>`;
+}
+
+function remoteChip(p) {
+  const r = remoteOf(p);
+  if (r === null) return `<span class="chip warn" title="${esc(p.remoteHinweis || "Remote-Anteil in der Ausschreibung nicht genannt")}">Remote nicht genannt</span>`;
+  const cls = r >= 70 ? "ok" : "bad";
+  return `<span class="chip ${cls} rm" title="${esc(p.remoteHinweis || `Remote ${r} %`)}"><span class="rm-bar" aria-hidden="true"><i style="width:${r}%"></i><b></b></span>${r} % remote</span>`;
+}
+
+function renderProject(p, run) {
+  const s = scoreOf(p); const t = tone(s); const on = s === null ? 0 : Math.round(s);
+  const open = state.open.has(p.id); const st = stOf(p.id);
+  const fit = startFit(p, run);
+  const link = safeUrl(p.link);
+  const land = p.land && String(p.land).toUpperCase() !== "DE" ? String(p.land).toUpperCase() : null;
+  const sub = [p.kunde, p.einsatzort].filter(Boolean).map(esc).join(" · ");
+  const chips = [
+    p.plattform ? `<span class="chip">${esc(p.plattform)}</span>` : "",
+    p.s4hana === true ? `<span class="chip s4">S/4HANA</span>` : "",
+    remoteChip(p),
+    land ? `<span class="chip${land === "CH" ? " warn" : ""}">${esc(land)}</span>` : "",
+    p.start ? `<span class="chip${fit ? (fit.ok ? " ok" : " bad") : ""}" title="${fit ? esc(fit.text) : ""}">Start ${esc(parseDate(p.start) ? fmtDate(p.start) : p.start)}</span>` : "",
+    p.laufzeit ? `<span class="chip">${esc(p.laufzeit)}</span>` : "",
+  ].join("");
+  const head = `<div class="proj-head">
+      <div class="score tone-${t}" aria-label="Matching Score ${fmtScore(s)} von 10">
+        <div class="num">${fmtScore(s)}<small> /10</small></div>
+        <div class="segs" aria-hidden="true">${Array.from({ length: 10 }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("")}</div>
+      </div>
+      <div style="min-width:0">
+        <button class="proj-title" data-act="toggle" data-id="${esc(p.id)}" aria-expanded="${open}" aria-controls="pb-${esc(p.id)}">${esc(p.titel || "Ohne Titel")}</button>
+        ${sub ? `<p class="proj-sub">${sub}</p>` : `<div style="height:8px"></div>`}
+        <div class="chips">${chips}</div>
+      </div>
+      <div class="proj-side">
+        ${statusSelect(p.id)}
+        <span class="pub" title="Veröffentlicht ${esc(fmtDate(p.veroeffentlicht))}">${p.veroeffentlicht ? `veröff. ${esc(relDay(p.veroeffentlicht))}` : "Datum fehlt"}</span>
+      </div>
+    </div>`;
+  if (!open) return `<article class="proj${st === "verworfen" ? " is-out" : ""}" id="p-${esc(p.id)}">${head}</article>`;
+
+  const a = p.ansprechpartner || {};
+  const draft = state.drafts[p.id];
+  const note = draft !== undefined ? draft : ((state.status[p.id] && state.status[p.id].notiz) || "");
+  const kv = [
+    ["Veröffentlicht", p.veroeffentlicht ? `${fmtDate(p.veroeffentlicht)} (${relDay(p.veroeffentlicht)})` : null],
+    ["Start", p.start ? (parseDate(p.start) ? fmtDate(p.start) : p.start) + (fit ? ` · ${fit.text}` : "") : null],
+    ["Laufzeit", p.laufzeit], ["Einsatzort", p.einsatzort],
+    ["Remote", remoteOf(p) === null ? `nicht genannt${p.remoteHinweis ? ` · ${p.remoteHinweis}` : ""}` : `${remoteOf(p)} %${p.remoteHinweis ? ` · ${p.remoteHinweis}` : ""}`],
+    ["Endkunde/Branche", p.kunde], ["Plattform", p.plattform],
+  ].filter(([, v]) => v);
+  return `<article class="proj${st === "verworfen" ? " is-out" : ""}" id="p-${esc(p.id)}">${head}
+    <div class="proj-body" id="pb-${esc(p.id)}">
+      <div>
+        <div class="blk"><p class="eyebrow">Passung zum Berater</p><p>${esc(p.passung || "Keine Bewertung hinterlegt.")}</p></div>
+        <div class="blk"><p class="eyebrow">Anforderungen</p>${arr(p.anforderungen).length ? `<ul class="plain">${arr(p.anforderungen).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="muted">Keine Angaben.</p>`}</div>
+        <div class="blk note"><p class="eyebrow"><label for="note-${esc(p.id)}">Notiz</label></p>
+          <textarea id="note-${esc(p.id)}" data-note-for="${esc(p.id)}" placeholder="z. B. Stundensatz, Rückmeldung vom Vertrieb …"${state.canWrite && state.db ? "" : " disabled"}>${esc(note)}</textarea>
+          <div class="row"><span>${state.status[p.id] && state.status[p.id].geaendertAm ? `Zuletzt geändert ${esc(new Date(state.status[p.id].geaendertAm).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }))}` : ""}</span>${state.canWrite && state.db ? `<button class="btn" data-act="save-note" data-id="${esc(p.id)}"${draft === undefined ? " disabled" : ""}>Notiz speichern</button>` : ""}</div>
+        </div>
+      </div>
+      <div>
+        <div class="blk"><p class="eyebrow">Eckdaten</p><dl class="kv">${kv.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
+        <div class="blk"><p class="eyebrow">Ansprechpartner</p>${a.name || a.email || a.telefon ? `<div class="contact">
+          ${a.name ? `<div class="row"><strong>${esc(a.name)}</strong></div>` : ""}
+          ${a.email ? `<div class="row"><span class="mono" id="em-${esc(p.id)}">${esc(a.email)}</span><button class="linkcopy" data-act="copy" data-target="em-${esc(p.id)}">kopieren</button></div>` : ""}
+          ${a.telefon ? `<div class="row"><span class="mono" id="tel-${esc(p.id)}">${esc(a.telefon)}</span><button class="linkcopy" data-act="copy" data-target="tel-${esc(p.id)}">kopieren</button></div>` : ""}
+        </div>` : `<p class="muted">Nicht angegeben.</p>`}</div>
+        <div class="blk">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung öffnen ↗</a>` : `<span class="chip warn">Kein gültiger Link hinterlegt</span>`}</div>
+      </div>
+    </div>
+  </article>`;
+}
+
+function renderList() {
+  const run = runById(state.runId); if (!run) return;
+  const ps = projectsOf(run.id);
+  const shown = applyFilters(ps);
+  const el = document.getElementById("plist");
+  const cnt = document.getElementById("pcount");
+  if (cnt) cnt.textContent = shown.length === ps.length ? `${ps.length} Projekte` : `${shown.length} von ${ps.length} Projekten`;
+  if (!el) return;
+  el.innerHTML = shown.length ? shown.map((p) => renderProject(p, run)).join("")
+    : `<div class="panel empty"><p>${ps.length ? "Kein Projekt passt zu den Filtern." : "Diese Recherche enthält keine Projekte."}</p>${ps.length ? `<button class="btn" data-act="reset-filters">Filter zurücksetzen</button>` : ""}</div>`;
+}
+
+function renderRecherchen() {
+  if (state.dbState === "missing") return noDbPanel();
+  const runs = runsSorted();
+  if (state.loaded.runs && !runs.length) {
+    return `<div class="panel empty">
+      <p class="eyebrow">Noch leer</p>
+      <h2>Noch keine Recherche im Radar</h2>
+      <p>Sobald dein Recherche-Claude Ergebnisse ablegt, erscheint hier links jede Recherche mit Beraterprofil, Management-Zusammenfassung und den Projekten nach Matching Score.</p>
+      <ol class="steps"><li>Ergänze die Anweisung deines Recherche-Claudes um den Baustein aus „Anbindung“.</li><li>Er schreibt die Ergebnisse direkt hierher, oder du fügst seinen JSON-Block unter „Anbindung“ ein.</li></ol>
+      <button class="btn primary" data-act="tab" data-tab="anbindung">Zur Anbindung</button>
+    </div>`;
+  }
+  if (state.loaded.runs && !runById(state.runId)) state.runId = runs[0] ? runs[0].id : null;
+  const run = runById(state.runId);
+  const ps = run ? projectsOf(run.id) : [];
+  return `<div class="layout">${renderRail()}
+    <div class="main">${run ? `
+      ${renderProfile(run)}
+      ${renderSummary(run, ps)}
+      <section aria-label="Projekte" style="display:grid;gap:12px">
+        <div class="result-line"><h3>Projekte</h3><span class="muted mono" id="pcount"></span></div>
+        ${renderFilters(ps)}
+        <div class="plist" id="plist"></div>
+      </section>` : `<div class="skel" style="height:180px"></div><div class="skel" style="height:140px"></div>`}
+    </div></div>`;
+}
+
+/* ---------- render: pipeline ---------- */
+function renderPipeline() {
+  if (state.dbState === "missing") return noDbPanel();
+  const lanes = PIPE.map((k) => ({ s: STATUS.find((x) => x.k === k), items: state.projects.filter((p) => stOf(p.id) === k).sort(byScore) }));
+  const total = lanes.reduce((n, l) => n + l.items.length, 0);
+  return `<div style="display:grid;gap:16px">
+    <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "" : "Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
+    <div class="pipe">${lanes.map((l) => `<section class="lane" aria-label="${esc(l.s.l)}">
+      <div class="lane-head"><h3>${esc(l.s.l)}</h3><span class="count">${l.items.length}</span></div>
+      ${l.items.length ? l.items.map((p) => {
+        const run = runById(p.rechercheId); const s = scoreOf(p); const link = safeUrl(p.link);
+        const note = state.status[p.id] && state.status[p.id].notiz;
+        return `<article class="panel card">
+          <div class="row"><span class="score-pill tone-${tone(s)}">${fmtScore(s)}</span><span class="pub">${p.veroeffentlicht ? esc(relDay(p.veroeffentlicht)) : ""}</span></div>
+          <button class="t" data-act="open-in-run" data-id="${esc(p.id)}">${esc(p.titel || "Ohne Titel")}</button>
+          <div class="meta">${esc((run && run.berater && run.berater.name) || "Recherche gelöscht")}${p.plattform ? ` · ${esc(p.plattform)}` : ""}${remoteOf(p) !== null ? ` · ${remoteOf(p)} % remote` : ""}</div>
+          ${note ? `<div class="meta" style="color:var(--ink)">${esc(note)}</div>` : ""}
+          <div class="row">${statusSelect(p.id)}${link ? `<a class="linkcopy" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung ↗</a>` : ""}</div>
+        </article>`;
+      }).join("") : `<div class="lane-empty">Nichts in diesem Stand.</div>`}
+    </section>`).join("")}</div>
+  </div>`;
+}
+
+/* ---------- render: anbindung ---------- */
+const URL_PH = "<URL dieses Artefakts>";
+function promptDirect(url) {
+  return `## Ablage im Dashboard „SAP Projektradar“
+Schreibe nach jeder Recherche die Ergebnisse zusätzlich in das Artefakt
+${url}
+mit dem Tool ArtifactData (action "batch", ein Aufruf mit allen Dokumenten).
+
+1. Collection "recherchen", doc_id "JJJJ-MM-TT_hhmm_nachname" (nur a–z, 0–9, "-" und "_"). Felder:
+   berater {name, rolle, module[], seniority, verfuegbarAb (JJJJ-MM-TT oder "sofort"), auslastung, remote, region},
+   zeitraum, erstelltAm (ISO-Zeitstempel), plattformen[],
+   zusammenfassung {fazit, top3[], hoheErfolgswahrscheinlichkeit[], risiken[]},
+   alternativen[] (alternative Suchbegriffe, Module, Rollen – vor allem bei wenigen Treffern).
+   top3 und hoheErfolgswahrscheinlichkeit enthalten die doc_ids der Projekte.
+2. Je Projekt ein Dokument in Collection "projekte", doc_id "<recherche-doc_id>__01", "__02" … nach Score absteigend. Felder:
+   rechercheId, titel, kunde, einsatzort, land (DE/AT/CH …), remoteAnteil (Zahl 0–100, null wenn nicht genannt),
+   remoteHinweis, veroeffentlicht (JJJJ-MM-TT), laufzeit, start (JJJJ-MM-TT oder "ASAP"), passung, anforderungen[],
+   ansprechpartner {name, email, telefon}, link, plattform, s4hana (true/false), score (0–10, eine Nachkommastelle).
+3. Die Collection "status" nie anfassen. Dort pflegt der Ressourcenmanager den Bearbeitungsstand.
+
+Mehr als 49 Projekte auf mehrere batch-Aufrufe verteilen. Fehlende Angaben weglassen statt zu raten.
+Die Textantwort mit Management-Zusammenfassung und Projektübersicht bleibt wie gehabt.`;
+}
+const EXAMPLE_JSON = `{
+  "recherche": {
+    "berater": {
+      "name": "Vorname Nachname",
+      "rolle": "SAP FI/CO Consultant",
+      "module": ["FI", "CO"],
+      "seniority": "Senior",
+      "verfuegbarAb": "2026-11-01",
+      "auslastung": "100 %",
+      "remote": "mind. 80 % remote",
+      "region": "DACH, kein CH"
+    },
+    "zeitraum": "letzte 3 Tage",
+    "erstelltAm": "2026-10-13T09:30:00+02:00",
+    "plattformen": ["Freelancermap", "Hays", "Westhouse", "K2 Partnering", "Krongaard"],
+    "zusammenfassung": {
+      "fazit": "Ein bis zwei Sätze zur Lage.",
+      "top3": [1, 2, 3],
+      "hoheErfolgswahrscheinlichkeit": [1],
+      "risiken": ["…"]
+    },
+    "alternativen": ["…"]
+  },
+  "projekte": [
+    {
+      "nr": 1,
+      "titel": "…",
+      "kunde": "…",
+      "einsatzort": "…",
+      "land": "DE",
+      "remoteAnteil": 80,
+      "remoteHinweis": "…",
+      "veroeffentlicht": "2026-10-12",
+      "laufzeit": "…",
+      "start": "2026-11-01",
+      "passung": "…",
+      "anforderungen": ["…", "…"],
+      "ansprechpartner": { "name": "…", "email": "…", "telefon": "…" },
+      "link": "https://…",
+      "plattform": "Freelancermap",
+      "s4hana": true,
+      "score": 8.5
+    }
+  ]
+}`;
+function promptPaste() {
+  return `## Export für das Dashboard „SAP Projektradar“
+Gib am Ende jeder Antwort zusätzlich einen JSON-Codeblock in genau diesem Aufbau aus.
+Regeln: fehlende Angaben weglassen statt zu raten · remoteAnteil als Zahl 0–100 oder null (nicht genannt)
+· Datumswerte als JJJJ-MM-TT · score 0–10 mit einer Nachkommastelle · Projekte nach Score absteigend
+· top3 und hoheErfolgswahrscheinlichkeit verweisen über "nr" auf die Projekte.
+
+\`\`\`json
+${EXAMPLE_JSON}
+\`\`\``;
+}
+
+function renderAnbindung() {
+  const url = state.meta.url || URL_PH;
+  const schema = [
+    ["berater.name / rolle", "Wer gesucht wird. Pflicht ist nur der Name."],
+    ["berater.module[]", "SAP-Module als Kürzel, z. B. FI, CO, SD, EWM."],
+    ["berater.verfuegbarAb", "JJJJ-MM-TT. Daran prüft das Radar, ob der Projektstart passt."],
+    ["zusammenfassung", "fazit, top3[], hoheErfolgswahrscheinlichkeit[], risiken[]"],
+    ["alternativen[]", "Suchbegriffe, Nachbarmodule, Nachbarrollen"],
+    ["projekte[].score", "0–10. Bestimmt Reihenfolge und Farbe."],
+    ["projekte[].remoteAnteil", "Zahl 0–100 oder null. Null erscheint als „Remote nicht genannt“."],
+    ["projekte[].veroeffentlicht", "JJJJ-MM-TT"],
+    ["projekte[].start", "JJJJ-MM-TT oder „ASAP“"],
+    ["projekte[].s4hana", "true, wenn S/4HANA-Projekt"],
+    ["projekte[].link", "Vollständige https-Adresse der Ausschreibung"],
+  ];
+  return `<div class="conn">
+    <p class="muted" style="margin:0;max-width:72ch">Der Recherche-Claude legt seine Ergebnisse auf einem von zwei Wegen ab. Den Bearbeitungsstand und deine Notizen speichert das Radar getrennt davon, eine neue Recherche überschreibt sie also nicht.</p>
+    <div class="conn-grid">
+      <section class="panel">
+        <p class="eyebrow">Weg A · automatisch</p>
+        <h2>Claude schreibt direkt ins Radar</h2>
+        <p>Für Claude Code und Cowork, also überall dort, wo Claude die Artifact-Tools hat. Füge diesen Baustein an seine Anweisung an:</p>
+        <div class="urlrow"><span class="muted">Adresse:</span><code id="art-url">${esc(url)}</code><button class="linkcopy" data-act="copy" data-target="art-url">kopieren</button></div>
+        <div class="codebox"><pre id="prompt-a">${esc(promptDirect(url))}</pre><button class="btn" data-act="copy" data-target="prompt-a">Kopieren</button></div>
+      </section>
+      <section class="panel">
+        <p class="eyebrow">Weg B · Copy &amp; Paste</p>
+        <h2>JSON-Block hier einfügen</h2>
+        <p>Für den normalen Claude-Chat. Der Baustein sorgt dafür, dass Claude am Ende einen JSON-Block ausgibt:</p>
+        <div class="codebox"><pre id="prompt-b">${esc(promptPaste())}</pre><button class="btn" data-act="copy" data-target="prompt-b">Kopieren</button></div>
+      </section>
+    </div>
+    <section class="panel" aria-labelledby="imp-h">
+      <p class="eyebrow">Import</p>
+      <h2 id="imp-h">Recherche einfügen</h2>
+      <p>Füge den JSON-Block aus der Antwort ein, gern mitsamt den \`\`\`json-Zeilen. Jeder Import legt eine neue Recherche an.</p>
+      <textarea id="import-json" spellcheck="false" placeholder='{ "recherche": { "berater": { "name": "…" } }, "projekte": [ … ] }'${state.canWrite && state.db ? "" : " disabled"}>${esc(state.importText)}</textarea>
+      ${state.importMsg ? `<div class="msg ${state.importMsg.kind}" role="status">${esc(state.importMsg.text)}</div>` : ""}
+      <div><button class="btn primary" data-act="import"${!state.db || !state.canWrite || state.busy ? " disabled" : ""}>${state.busy ? "Importiere …" : "Importieren"}</button>${!state.db ? ` <span class="muted">Speichern ist in dieser Ansicht nicht verfügbar.</span>` : (!state.canWrite ? ` <span class="muted">Du hast hier nur Leserechte.</span>` : "")}</div>
+    </section>
+    <section class="panel">
+      <p class="eyebrow">Datenfelder</p>
+      <h2>Was das Radar auswertet</h2>
+      <div class="tablewrap"><table class="schema"><thead><tr><th>Feld</th><th>Bedeutung</th></tr></thead><tbody>${schema.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</tbody></table></div>
+    </section>
+  </div>`;
+}
+
+function noDbPanel() {
+  return `<div class="panel empty"><h2>Daten nicht verfügbar</h2><p>Diese Ansicht kann die gespeicherten Recherchen nicht laden. Öffne das Radar angemeldet auf claude.ai.</p></div>`;
+}
+
+/* ---------- render root ---------- */
+function render() {
+  const a = document.activeElement; const fid = a && a.id;
+  let s0 = null, s1 = null;
+  if (fid && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) { try { s0 = a.selectionStart; s1 = a.selectionEnd; } catch (e) {} }
+  renderTabs();
+  const v = document.getElementById("view");
+  v.setAttribute("role", "tabpanel"); v.setAttribute("aria-labelledby", "tab-" + state.tab);
+  v.innerHTML = state.tab === "pipeline" ? renderPipeline() : state.tab === "anbindung" ? renderAnbindung() : renderRecherchen();
+  if (state.tab === "recherchen") renderList();
+  if (fid) {
+    const n = document.getElementById(fid);
+    if (n && n !== a) { n.focus({ preventScroll: true }); if (s0 !== null) { try { n.setSelectionRange(s0, s1); } catch (e) {} } }
+  }
+}
+
+/* ---------- actions ---------- */
+const writeChains = {};
+function saveStatus(pid, patch) {
+  const cur = state.status[pid] || {};
+  const body = { status: cur.status || "neu", notiz: cur.notiz || "", ...patch, geaendertAm: new Date().toISOString() };
+  state.status[pid] = body;
+  writeChains[pid] = (writeChains[pid] || Promise.resolve())
+    .then(() => state.db.doc("status/" + pid).set(body))
+    .catch((e) => { toast(dbErrorText(e)); if (e && e.code === "invalid_argument") { state.canWrite = false; render(); } });
+  return writeChains[pid];
+}
+
+function jumpTo(pid) {
+  const p = state.projects.find((x) => x.id === pid); if (!p) return;
+  state.tab = "recherchen"; state.runId = p.rechercheId; state.open.add(pid);
+  if (!applyFilters(projectsOf(p.rechercheId)).some((x) => x.id === pid)) {
+    Object.assign(state.filters, { q: "", min: "0", remote: "alle", plattform: "alle", status: "alle" });
+  }
+  persist(); render();
+  const el = document.getElementById("p-" + pid);
+  if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+
+async function copyFrom(btn) {
+  const el = document.getElementById(btn.dataset.target); if (!el) return;
+  const text = el.textContent;
+  const label = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "Kopiert";
+  } catch (e) {
+    const r = document.createRange(); r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    btn.textContent = "Markiert, jetzt Strg+C";
+  }
+  setTimeout(() => { btn.textContent = label; }, 1800);
+}
+
+async function deleteRun(id) {
+  if (!state.db || state.busy) return;
+  state.busy = true; render();
+  try {
+    for (const p of projectsOf(id)) {
+      await state.db.doc("projekte/" + p.id).delete();
+      if (state.status[p.id]) await state.db.doc("status/" + p.id).delete();
+    }
+    await state.db.doc("recherchen/" + id).delete();
+    state.confirmDel = null; state.runId = null;
+    toast("Recherche gelöscht");
+  } catch (e) { toast(dbErrorText(e)); }
+  state.busy = false; persist(); render();
+}
+
+function localStamp(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+async function doImport() {
+  if (!state.db || state.busy) return;
+  const fail = (text) => { state.importMsg = { kind: "err", text }; render(); };
+  const raw = state.importText.trim();
+  const a = raw.indexOf("{"), b = raw.lastIndexOf("}");
+  if (a < 0 || b < a) return fail("Kein JSON gefunden. Füge den kompletten Block ein, der mit { beginnt.");
+  let obj;
+  try { obj = JSON.parse(raw.slice(a, b + 1)); } catch (e) { return fail("Das JSON ist nicht lesbar: " + e.message); }
+  let rec = obj.recherche || (obj.berater ? obj : null);
+  const projs = arr(obj.projekte || (rec && rec.projekte)).filter((p) => p && typeof p === "object");
+  if (!rec || !rec.berater || !rec.berater.name) return fail('Es fehlt "recherche.berater.name".');
+  rec = { ...rec }; delete rec.projekte;
+
+  const created = rec.erstelltAm && !isNaN(Date.parse(rec.erstelltAm)) ? new Date(rec.erstelltAm) : new Date();
+  const runId = cleanId(rec.id) || `${localStamp(new Date())}_${slug(rec.berater.name)}`;
+  const ids = projs.map((p, i) => cleanId(p.id) || `${runId}__${String(i + 1).padStart(2, "0")}`);
+  const byNr = new Map(projs.map((p, i) => [String(p.nr ?? i + 1), ids[i]]));
+  const byTitle = new Map(projs.map((p, i) => [String(p.titel || "").trim().toLowerCase(), ids[i]]));
+  const ref = (x) => {
+    const s = String(x).trim();
+    if (/^\d+$/.test(s)) return byNr.get(s) ?? s;
+    return byTitle.get(s.toLowerCase()) ?? (ids.includes(s) ? s : s);
+  };
+  const z = rec.zusammenfassung || {};
+  const runBody = clone({
+    ...rec, id: undefined, erstelltAm: created.toISOString(),
+    zusammenfassung: { ...z, top3: arr(z.top3).map(ref), hoheErfolgswahrscheinlichkeit: arr(z.hoheErfolgswahrscheinlichkeit).map(ref) },
+  });
+
+  state.busy = true; state.importMsg = null; render();
+  try {
+    for (let i = 0; i < projs.length; i++) {
+      const p = clone({ ...projs[i], id: undefined, nr: undefined, rechercheId: runId });
+      await state.db.doc("projekte/" + ids[i]).set(p);
+    }
+    await state.db.doc("recherchen/" + runId).set(runBody);
+    state.importText = "";
+    state.importMsg = { kind: "ok", text: `Importiert: ${rec.berater.name}, ${projs.length} Projekte.` };
+    state.runId = runId; state.tab = "recherchen"; persist();
+    toast(`Recherche für ${rec.berater.name} importiert`);
+  } catch (e) {
+    state.importMsg = { kind: "err", text: dbErrorText(e) };
+  }
+  state.busy = false; render();
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act, id = b.dataset.id;
+  if (act === "tab") { state.tab = b.dataset.tab; persist(); render(); window.scrollTo({ top: 0 }); }
+  else if (act === "run") { state.runId = id; state.confirmDel = null; persist(); render(); }
+  else if (act === "toggle") { state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderList(); }
+  else if (act === "jump" || act === "open-in-run") jumpTo(id);
+  else if (act === "copy") copyFrom(b);
+  else if (act === "save-note") {
+    const text = state.drafts[id]; if (text === undefined) return;
+    saveStatus(id, { notiz: text }).then(() => { if (state.drafts[id] === text) delete state.drafts[id]; toast("Notiz gespeichert"); render(); });
+  }
+  else if (act === "del-ask") { state.confirmDel = id; render(); }
+  else if (act === "del-cancel") { state.confirmDel = null; render(); }
+  else if (act === "del-run") deleteRun(id);
+  else if (act === "import") doImport();
+  else if (act === "reset-filters") { Object.assign(state.filters, { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv" }); persist(); render(); }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.dataset.filter) { state.filters[t.dataset.filter] = t.value; persist(); renderList(); }
+  else if (t.dataset.statusFor) {
+    const pid = t.dataset.statusFor;
+    saveStatus(pid, { status: t.value });
+    const lbl = (STATUS.find((s) => s.k === t.value) || {}).l;
+    toast(`Status: ${lbl}`);
+    render();
+  }
+});
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.id === "f-q") { state.filters.q = t.value; renderList(); }
+  else if (t.dataset.noteFor) {
+    state.drafts[t.dataset.noteFor] = t.value;
+    const btn = t.closest(".note").querySelector('[data-act="save-note"]'); if (btn) btn.disabled = false;
+  }
+  else if (t.id === "import-json") { state.importText = t.value; }
+});
+
+/* ---------- boot ---------- */
+render();
+(async () => {
+  const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+  if (!db) { state.dbState = "missing"; state.loaded.runs = true; render(); return; }
+  state.db = db; state.dbState = "ready"; render();
+  const onErr = (e) => { if (e && e.code === "revoked") { state.db = null; state.dbState = "missing"; render(); } };
+  db.collection("recherchen").limit(1000).onSnapshot((snap) => {
+    state.runs = snap.docs.map((d) => ({ ...d.data(), id: d.id })); state.loaded.runs = true; render();
+  }, onErr);
+  db.collection("projekte").limit(1000).onSnapshot((snap) => {
+    state.projects = snap.docs.map((d) => ({ ...d.data(), id: d.id })); state.loaded.projects = true; render();
+  }, onErr);
+  db.collection("status").limit(1000).onSnapshot((snap) => {
+    const m = {}; snap.docs.forEach((d) => { m[d.id] = d.data(); }); state.status = m; render();
+  }, onErr);
+  db.doc("meta/anbindung").onSnapshot((d) => { state.meta = d.exists ? d.data() : {}; if (state.tab === "anbindung") render(); }, onErr);
+  try {
+    const user = await window.claude.use("user");
+    if (user) { const c = await user.can("data.write"); if (c === false) { state.canWrite = false; render(); } }
+  } catch (e) {}
+})();
+})();
+</script>
