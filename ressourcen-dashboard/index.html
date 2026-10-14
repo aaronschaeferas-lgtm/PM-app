@@ -1,293 +1,363 @@
 <title>SAP Projektradar</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: left rail of research runs (consultant + date) · right pane = consultant profile → management summary → filter bar → projects ranked by matching score */
+/* Layout: iOS grouped screen. Large-title nav bar, content cards on the grouped background, one card per job posting (all matching consultants bundled), floating Liquid-Glass tab bar for the four areas. Tokens: "Native iOS" design system. */
 :root{
-  --bg:#F3F4F7; --surface:#FFFFFF; --sunken:#E8EAF0; --ink:#161A26; --muted:#5A6075; --line:#D8DBE5;
-  --accent:#2B45C4; --accent-ink:#FFFFFF; --accent-soft:#E2E7FB;
-  --good:#1D7748; --good-soft:#DCF0E4; --warn:#9A5B00; --warn-soft:#FAEAD2; --bad:#AD3434; --bad-soft:#F6DEDE;
-  --shadow:0 1px 2px rgb(10 14 30 / .06), 0 2px 8px rgb(10 14 30 / .04);
-  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
-  --f-body:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
-  --f-data:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --red:#ff383c; --orange:#ff8d28; --yellow:#ffcc00; --green:#34c759; --mint:#00c8b3; --teal:#00c3d0; --cyan:#00c0e8;
+  --blue:#0088ff; --indigo:#6155f5; --purple:#cb30e0; --pink:#ff2d55; --brown:#ac7f5e;
+  --blue-strong:#1e6ef4; --red-strong:#e9152d; --orange-strong:#c55300; --green-strong:#008932;
+  --accent:var(--blue); --accent-strong:var(--blue-strong); --on-accent:#ffffff;
+  --gray:#8e8e93; --gray2:#aeaeb2; --gray3:#c7c7cc; --gray4:#d1d1d6; --gray5:#e5e5ea; --gray6:#f2f2f7;
+  --bg-primary:#ffffff; --bg-secondary:#f2f2f7; --bg-tertiary:#ffffff;
+  --bg-grouped-primary:#f2f2f7; --bg-grouped-secondary:#ffffff; --bg-grouped-tertiary:#f2f2f7;
+  --label:#000000; --label-secondary:rgba(60,60,67,.6); --label-tertiary:rgba(60,60,67,.3);
+  --fill:rgba(120,120,128,.2); --fill-secondary:rgba(120,120,128,.16); --fill-tertiary:rgba(118,118,128,.12); --fill-quaternary:rgba(116,116,128,.08);
+  --separator:rgba(60,60,67,.29);
+  --glass-regular:rgba(255,255,255,.72); --glass-stroke:rgba(255,255,255,.8);
+  --shadow-glass:0 8px 32px rgba(0,0,0,.12); --shadow-thumb:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04);
+  --tint-blue:color-mix(in srgb,var(--blue) 13%,transparent); --tint-green:color-mix(in srgb,var(--green) 15%,transparent);
+  --tint-orange:color-mix(in srgb,var(--orange) 15%,transparent); --tint-red:color-mix(in srgb,var(--red) 12%,transparent);
+  --tint-indigo:color-mix(in srgb,var(--indigo) 13%,transparent);
+  --font-sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",system-ui,sans-serif;
+  --font-rounded:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --radius-xs:7px; --radius-sm:10px; --radius-md:16px; --radius-lg:26px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0F121A; --surface:#171B26; --sunken:#1F2433; --ink:#E6E8F0; --muted:#9BA2B8; --line:#2B3144;
-  --accent:#8FA1FF; --accent-ink:#0F121A; --accent-soft:#222A4C;
-  --good:#5FCB91; --good-soft:#15301F; --warn:#E9AA4E; --warn-soft:#352710; --bad:#EF7E7E; --bad-soft:#3A1D1E;
-  --shadow:0 1px 2px rgb(0 0 0 / .3); color-scheme:dark;
+  --red:#ff4245; --orange:#ff9230; --yellow:#ffd600; --green:#30d158; --mint:#00dac3; --teal:#00d2e0; --cyan:#3cd3fe;
+  --blue:#0091ff; --indigo:#6d7cff; --purple:#db34f2; --pink:#ff375f; --brown:#b78a66;
+  --blue-strong:#0091ff; --red-strong:#ff4245; --orange-strong:#ff9230; --green-strong:#30d158;
+  --gray2:#636366; --gray3:#48484a; --gray4:#3a3a3c; --gray5:#2c2c2e; --gray6:#1c1c1e;
+  --bg-primary:#000000; --bg-secondary:#1c1c1e; --bg-tertiary:#2c2c2e;
+  --bg-grouped-primary:#000000; --bg-grouped-secondary:#1c1c1e; --bg-grouped-tertiary:#2c2c2e;
+  --label:#ffffff; --label-secondary:rgba(235,235,245,.6); --label-tertiary:rgba(235,235,245,.3);
+  --fill:rgba(120,120,128,.36); --fill-secondary:rgba(120,120,128,.32); --fill-tertiary:rgba(118,118,128,.24); --fill-quaternary:rgba(118,118,128,.18);
+  --separator:rgba(84,84,88,.65);
+  --glass-regular:rgba(40,40,44,.62); --glass-stroke:rgba(255,255,255,.14); --shadow-glass:0 8px 32px rgba(0,0,0,.5);
+  color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#0F121A; --surface:#171B26; --sunken:#1F2433; --ink:#E6E8F0; --muted:#9BA2B8; --line:#2B3144;
-  --accent:#8FA1FF; --accent-ink:#0F121A; --accent-soft:#222A4C;
-  --good:#5FCB91; --good-soft:#15301F; --warn:#E9AA4E; --warn-soft:#352710; --bad:#EF7E7E; --bad-soft:#3A1D1E;
-  --shadow:0 1px 2px rgb(0 0 0 / .3); color-scheme:dark;
+  --red:#ff4245; --orange:#ff9230; --yellow:#ffd600; --green:#30d158; --mint:#00dac3; --teal:#00d2e0; --cyan:#3cd3fe;
+  --blue:#0091ff; --indigo:#6d7cff; --purple:#db34f2; --pink:#ff375f; --brown:#b78a66;
+  --blue-strong:#0091ff; --red-strong:#ff4245; --orange-strong:#ff9230; --green-strong:#30d158;
+  --gray2:#636366; --gray3:#48484a; --gray4:#3a3a3c; --gray5:#2c2c2e; --gray6:#1c1c1e;
+  --bg-primary:#000000; --bg-secondary:#1c1c1e; --bg-tertiary:#2c2c2e;
+  --bg-grouped-primary:#000000; --bg-grouped-secondary:#1c1c1e; --bg-grouped-tertiary:#2c2c2e;
+  --label:#ffffff; --label-secondary:rgba(235,235,245,.6); --label-tertiary:rgba(235,235,245,.3);
+  --fill:rgba(120,120,128,.36); --fill-secondary:rgba(120,120,128,.32); --fill-tertiary:rgba(118,118,128,.24); --fill-quaternary:rgba(118,118,128,.18);
+  --separator:rgba(84,84,88,.65);
+  --glass-regular:rgba(40,40,44,.62); --glass-stroke:rgba(255,255,255,.14); --shadow-glass:0 8px 32px rgba(0,0,0,.5);
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
-button,select,input,textarea{font:inherit;color:inherit}
-a{color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
-h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
-.app{max-width:1320px;margin:0 auto;padding-inline:24px;padding-block:20px 56px}
-@media (max-width:560px){.app{padding-inline:16px}}
+body{background:var(--bg-grouped-primary);color:var(--label);font:400 17px/22px var(--font-sans);letter-spacing:-.43px;-webkit-font-smoothing:antialiased}
+button,select,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+a{color:var(--accent-strong)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0}
+.app{max-width:1272px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px calc(124px + env(safe-area-inset-bottom,0px))}
+@media (min-width:760px){.app{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}}
+.ic{width:20px;height:20px;flex:none}
+.mono{font-family:var(--font-mono);font-size:.9em;letter-spacing:0}
+.muted{color:var(--label-secondary)}
+.title2{font:700 22px/28px var(--font-sans);letter-spacing:-.26px}
+.title3{font:600 20px/25px var(--font-sans);letter-spacing:-.45px}
+.sec-hdr{margin:0 0 6px;font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);text-transform:uppercase}
+.hint{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);max-width:68ch}
+.stack{display:grid;gap:12px;min-width:0}
 
-/* header */
-.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:24px}
-.brand{display:flex;align-items:center;gap:12px;min-width:0}
-.brand svg{width:38px;height:38px;color:var(--accent);flex:none}
-h1{font-weight:780;font-stretch:85%;font-size:1.6rem;line-height:1.05;letter-spacing:-.005em}
-.sub{margin:3px 0 0;color:var(--muted);font-size:.875rem}
-.tabs{display:flex;gap:2px;background:var(--sunken);padding:3px;border-radius:10px}
-.tabs button{border:0;background:transparent;padding:7px 14px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:600;font-size:.9rem;display:flex;gap:6px;align-items:center}
-.tabs button:hover{color:var(--ink)}
-.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
-.count{font:500 .72rem/1 var(--f-data);background:var(--accent-soft);color:var(--accent);padding:3px 6px;border-radius:999px}
+/* navigation bar */
+.nav{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:16px 20px}
+.nav .eyebrow{margin:0 0 2px;font:600 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);text-transform:uppercase}
+.nav h1{font:700 34px/41px var(--font-sans);letter-spacing:.4px}
+.glass{background:var(--glass-regular);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 0 0 1px var(--glass-stroke),var(--shadow-glass)}
+.glassbtn{width:44px;height:44px;border-radius:999px;border:0;display:grid;place-items:center;color:var(--label);cursor:pointer;flex:none}
+.glassbtn .ic{width:22px;height:22px}
 
-/* layout */
-.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:28px;align-items:start}
-@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr);gap:18px}}
-.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 32px);overflow:auto}
-.rail-label{font:600 .7rem/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:4px 12px 8px}
-@media (max-width:900px){
-  .rail{position:static;flex-direction:row;overflow-x:auto;max-height:none;padding-bottom:6px;scroll-snap-type:x proximity}
-  .rail-label{display:none}
-  .run-btn{min-width:230px;scroll-snap-align:start}
-}
-.run-btn{display:grid;gap:1px;text-align:left;padding:10px 12px;border:1px solid transparent;border-radius:10px;background:transparent;cursor:pointer}
-.run-btn:hover{background:var(--surface)}
-.run-btn[aria-current="true"]{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
-.run-name{font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.run-role{color:var(--muted);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.run-meta{display:flex;gap:10px;align-items:center;font:400 .75rem/1.6 var(--f-data);color:var(--muted);margin-top:4px}
-.run-meta .score-pill{margin-left:auto}
+/* tab bar */
+.tabbar{position:fixed;z-index:20;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(480px,calc(100% - 32px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));height:62px;padding:4px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:999px}
+.tabbar button{position:relative;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--label);font:600 10px/12px var(--font-sans);letter-spacing:0;border-radius:999px;cursor:pointer;min-width:0}
+.tabbar button[aria-current="page"]{color:var(--accent-strong);background:var(--fill-tertiary)}
+.tabbar .ic{width:24px;height:24px}
+.tabbar .badge{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red-strong);color:var(--on-accent);font:600 11px/18px var(--font-sans);text-align:center}
 
-/* shared bits */
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px}
-.eyebrow{font:600 .7rem/1.2 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
-.muted{color:var(--muted)}
-.mono{font-family:var(--f-data);font-variant-numeric:tabular-nums}
-.tag-demo{font:600 .66rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:var(--warn-soft);color:var(--warn)}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;line-height:1.2;padding:3px 8px;border-radius:6px;background:var(--sunken);color:var(--ink);white-space:nowrap}
-.chip.mod{font:500 .74rem/1.2 var(--f-data);background:var(--accent-soft);color:var(--accent)}
-.chip.s4{font-weight:700;background:var(--accent-soft);color:var(--accent)}
-.chip.ok{background:var(--good-soft);color:var(--good)}
-.chip.warn{background:var(--warn-soft);color:var(--warn)}
-.chip.bad{background:var(--bad-soft);color:var(--bad)}
+/* buttons */
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:0 14px;border:0;border-radius:999px;font:600 15px/20px var(--font-sans);letter-spacing:-.23px;cursor:pointer;text-decoration:none;white-space:nowrap;max-width:100%}
+.btn::before{content:"";position:absolute;inset:-5px 0}
+.btn > span{overflow:hidden;text-overflow:ellipsis}
+.btn .ic{width:18px;height:18px}
+.btn.lg{min-height:50px;padding:0 24px;font-size:17px;line-height:22px;letter-spacing:-.43px}
+.btn.prominent{background:var(--accent-strong);color:var(--on-accent)}
+.btn.bordered{background:var(--fill-tertiary);color:var(--accent-strong)}
+.btn.plain{background:transparent;color:var(--accent-strong);font-weight:400;padding:0 8px}
+.btn.xs{min-height:28px;padding:0 6px;font-size:13px;line-height:18px;letter-spacing:-.08px}
+.btn.xs .ic{width:15px;height:15px}
+.btn.destructive{color:var(--red-strong)}
+.btn:disabled{opacity:.4;cursor:default}
+@media (hover:hover){.btn.prominent:hover{filter:brightness(1.08)}.btn.bordered:hover{background:var(--fill-secondary)}}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* chips & pills */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;font-size:.875rem;text-decoration:none;color:var(--ink)}
-.btn:hover{border-color:var(--muted)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.danger{color:var(--bad)}
-.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
-.btn.ghost:hover{color:var(--ink);background:var(--sunken)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.score-pill{font:600 .78rem/1 var(--f-data);padding:4px 7px;border-radius:6px;font-variant-numeric:tabular-nums}
-.tone-good{background:var(--good-soft);color:var(--good)}
-.tone-mid{background:var(--accent-soft);color:var(--accent)}
-.tone-low{background:var(--warn-soft);color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:2px 9px;border-radius:999px;background:var(--fill-tertiary);color:var(--label);font:400 13px/18px var(--font-sans);letter-spacing:-.08px;white-space:nowrap}
+.chip .ic{width:14px;height:14px}
+.t-blue{color:var(--blue-strong)} .t-green{color:var(--green-strong)} .t-orange{color:var(--orange-strong)} .t-red{color:var(--red-strong)} .t-indigo{color:var(--indigo)}
+.chip.t-blue{background:var(--tint-blue);font-weight:600} .chip.t-green{background:var(--tint-green);font-weight:600}
+.chip.t-orange{background:var(--tint-orange);font-weight:600} .chip.t-red{background:var(--tint-red);font-weight:600} .chip.t-indigo{background:var(--tint-indigo);font-weight:600}
+.tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:999px;background:var(--tint-orange);color:var(--orange-strong);font:600 11px/16px var(--font-sans);letter-spacing:.06px;text-transform:uppercase}
+.score-pill{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:1px 7px;border-radius:999px;font:700 13px/18px var(--font-rounded);font-variant-numeric:tabular-nums;letter-spacing:0}
+.score-pill.tone-good{background:var(--tint-green);color:var(--green-strong)}
+.score-pill.tone-mid{background:var(--tint-blue);color:var(--blue-strong)}
+.score-pill.tone-low{background:var(--tint-orange);color:var(--orange-strong)}
+.av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;flex:none;background:color-mix(in srgb,var(--av) 24%,var(--bg-grouped-secondary));color:var(--label);font:600 11px/1 var(--font-sans);letter-spacing:0}
+.av.lg{width:56px;height:56px;font-size:21px}
 
-/* profile */
-.main{display:flex;flex-direction:column;gap:20px;min-width:0}
-.profile{padding:20px 22px;display:grid;gap:16px}
-.profile-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start}
-.profile h2{font-size:1.65rem;font-weight:760;font-stretch:88%;line-height:1.1}
-.profile .role{margin:4px 0 0;color:var(--muted);font-size:1rem}
-.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px 20px;margin:0}
-.facts div{min-width:0}
-.facts dt{font:600 .68rem/1.3 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.facts dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}
-.demo-note{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-size:.9rem}
-.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem}
+/* score ring */
+.ring{position:relative;width:52px;height:52px;flex:none;--tone:var(--orange-strong)}
+.ring.tone-good{--tone:var(--green-strong)} .ring.tone-mid{--tone:var(--blue-strong)}
+.ring svg{display:block;width:100%;height:100%}
+.ring .trk{fill:none;stroke:var(--fill);stroke-width:5}
+.ring .val{fill:none;stroke:var(--tone);stroke-width:5;stroke-linecap:round}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font:700 15px/1 var(--font-rounded);font-variant-numeric:tabular-nums;letter-spacing:0;color:var(--tone)}
+.ring.sm{width:40px;height:40px}
+.ring.sm span{font-size:13px}
 
-/* summary */
-.summary{display:grid;grid-template-columns:minmax(170px,.75fr) repeat(3,minmax(0,1fr));gap:0}
-.summary > section{padding:18px 20px;min-width:0}
-.summary > section + section{border-left:1px solid var(--line)}
-@media (max-width:1100px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.summary > section:nth-child(3){border-left:0}.summary > section:nth-child(n+3){border-top:1px solid var(--line)}}
-@media (max-width:600px){.summary{grid-template-columns:minmax(0,1fr)}.summary > section + section{border-left:0;border-top:1px solid var(--line)}}
-.big{font:600 2.6rem/1 var(--f-data);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.big-sub{margin:8px 0 0;font-size:.85rem;color:var(--muted);display:grid;gap:2px}
-.toplist{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:rank}
-.toplist button{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:baseline;text-align:left;border:0;background:transparent;padding:4px 6px;margin:0 -6px;border-radius:8px;cursor:pointer;width:calc(100% + 12px)}
-.toplist button:hover{background:var(--sunken)}
-.toplist .rank{font:500 .75rem/1 var(--f-data);color:var(--muted)}
-.toplist .t{font-weight:600;font-size:.92rem;line-height:1.3}
-.plain{margin:0;padding-left:18px;display:grid;gap:6px;font-size:.92rem;line-height:1.35}
-.risks{list-style:none;padding:0}
-.risks li{display:grid;grid-template-columns:14px minmax(0,1fr);gap:8px}
-.risks li::before{content:"";width:8px;height:8px;margin-top:6px;border-radius:2px;background:var(--warn);transform:rotate(45deg)}
-.fazit{padding:14px 20px;border-top:1px solid var(--line);font-size:.95rem;grid-column:1/-1}
-.alts{padding:16px 20px;border-top:1px solid var(--line);grid-column:1/-1}
+/* status menu */
+.st{position:relative;display:inline-flex;border-radius:999px;background:var(--st-bg,var(--fill-tertiary));color:var(--st-fg,var(--label))}
+.st select{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font:600 13px/18px var(--font-sans);letter-spacing:-.08px;padding:7px 28px 7px 12px;border-radius:999px;cursor:pointer}
+.st select:disabled{cursor:default}
+.st::after{content:"";position:absolute;right:12px;top:50%;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.st option{background:var(--bg-tertiary);color:var(--label)}
+.st[data-st="vorgemerkt"]{--st-bg:var(--tint-indigo);--st-fg:var(--indigo)}
+.st[data-st="gesendet"]{--st-bg:var(--accent-strong);--st-fg:var(--on-accent)}
+.st[data-st="gespraech"]{--st-bg:var(--tint-orange);--st-fg:var(--orange-strong)}
+.st[data-st="zusage"]{--st-bg:var(--tint-green);--st-fg:var(--green-strong)}
+.st[data-st="verworfen"]{--st-bg:var(--tint-red);--st-fg:var(--red-strong)}
+.st[data-st="anrede-offen"]{--st-bg:var(--tint-orange);--st-fg:var(--orange-strong)}
 
-/* filters */
-.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
-.field{display:grid;gap:4px;min-width:0}
-.field label{font:600 .68rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.field input,.field select{height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 10px;min-width:0}
-.field.search{flex:1 1 220px}
-.field.search input{width:100%}
-.result-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-.result-line h3{font-size:1.1rem;font-weight:720;font-stretch:90%}
-.rl-right{display:flex;align-items:center;gap:12px}
+/* cards */
+.card{background:var(--bg-grouped-secondary);border-radius:var(--radius-lg);padding:16px;min-width:0}
+.k-head{display:flex;align-items:center;gap:6px;font:600 15px/20px var(--font-sans);letter-spacing:-.23px}
+.k-head .ic{width:18px;height:18px}
+.metric{font:700 28px/32px var(--font-rounded);font-variant-numeric:tabular-nums;letter-spacing:0}
+.metric-xl{font:700 48px/52px var(--font-rounded);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.note{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kcard{position:relative;display:flex;flex-direction:column;gap:8px;border:0;text-align:left;cursor:pointer;color:inherit}
+.kcard .chev{position:absolute;top:16px;right:14px;width:16px;height:16px;color:var(--gray3)}
+.kcard[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--accent)}
+@media (hover:hover){.kcard:hover .chev{color:var(--label-secondary)}}
+.banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--tint-orange);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font:400 15px/20px var(--font-sans);letter-spacing:-.23px}
 
-/* text export */
-.export{padding:16px 18px;display:grid;gap:12px}
-.ex-controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
-.seg{display:inline-flex;gap:2px;background:var(--sunken);padding:3px;border-radius:9px;border:0;margin:0}
-.seg legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.seg input{position:absolute;opacity:0;pointer-events:none}
-.seg label{padding:5px 12px;border-radius:7px;font-weight:600;font-size:.85rem;color:var(--muted);cursor:pointer}
-.seg input:checked + label{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
-.seg input:focus-visible + label{outline:2px solid var(--accent);outline-offset:1px}
-.check{display:inline-flex;align-items:center;gap:7px;font-size:.88rem;cursor:pointer}
-.check input{accent-color:var(--accent);width:16px;height:16px;margin:0}
-.check:has(input:disabled){opacity:.5;cursor:default}
-.ex-note{margin:0;font-size:.85rem;color:var(--muted)}
-.export .codebox pre{font-family:var(--f-body);font-size:.88rem;line-height:1.5;padding-right:120px;max-height:420px}
-.ptext{margin-top:10px}
-.ptext pre{font-family:var(--f-body)!important;font-size:.85rem!important;padding-right:96px!important}
-/* mail to contact */
-.btn.sm{padding:5px 10px;font-size:.8rem}
-.mailrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
-.mailnext{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.84rem;padding:8px 10px;border-radius:8px;background:var(--accent-soft)}
-.mailbox{display:grid;gap:8px}
-.mailbox .mf{display:grid;gap:3px;min-width:0}
-.mailbox .mf-head{display:flex;justify-content:space-between;align-items:center;font:600 .66rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.mailbox pre{margin:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:400 .84rem/1.5 var(--f-body);white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto}
-.pipe-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-.mailcfg{padding:20px 22px;display:grid;gap:14px}
-.mailcfg h3{font-size:1.1rem;font-weight:720;font-stretch:90%}
-.mailcfg .cols{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:24px}
-@media (max-width:820px){.mailcfg .cols{grid-template-columns:minmax(0,1fr)}}
-.mailcfg .stack{display:grid;gap:12px;align-content:start;min-width:0}
-.mailcfg .field input,.mailcfg .field select{width:100%;background:var(--bg)}
-#mv-angebot{min-height:170px!important}
-#mv-text,#mv-angebot{width:100%;min-height:300px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px 12px;font:400 .9rem/1.5 var(--f-body)}
-.hint{margin:0;font-size:.85rem;color:var(--muted);max-width:60ch}
-.ph{font:500 .74rem/1.2 var(--f-data);padding:3px 6px;border-radius:5px;background:var(--sunken);color:var(--ink)}
-.actions{display:flex;flex-wrap:wrap;gap:8px}
-@media (max-width:600px){
-  .export .codebox,.ptext{display:flex;flex-direction:column-reverse;gap:8px}
-  .export .codebox .btn,.ptext .btn{position:static;align-self:flex-start}
-  .export .codebox pre,.ptext pre{padding-right:16px!important}
+/* toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;margin-bottom:14px}
+.search{position:relative;flex:1 1 260px;min-width:0}
+.search input{width:100%;height:36px;border:0;border-radius:var(--radius-sm);background:var(--fill-tertiary);padding:0 12px 0 34px;font-size:17px}
+.search input::placeholder{color:var(--label-secondary)}
+.search .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--label-secondary)}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:minmax(0,auto);padding:3px;gap:2px;background:var(--fill-tertiary);border-radius:999px;max-width:100%}
+.seg button{border:0;background:transparent;color:var(--label);font:400 15px/20px var(--font-sans);letter-spacing:-.23px;min-height:32px;padding:0 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--bg-tertiary);font-weight:600;box-shadow:var(--shadow-thumb)}
+@media (max-width:560px){.toolbar .seg{width:100%;grid-auto-columns:minmax(0,1fr)}.seg button{padding:0 6px}}
+.menus{display:flex;flex-wrap:wrap;gap:8px}
+.menu{position:relative;display:inline-flex}
+.menu select{appearance:none;-webkit-appearance:none;height:34px;border:0;border-radius:999px;background:var(--fill-tertiary);color:var(--accent-strong);font:400 15px/20px var(--font-sans);letter-spacing:-.23px;padding:0 30px 0 14px;cursor:pointer;max-width:100%}
+.menu::after{content:"";position:absolute;right:13px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--accent-strong);border-bottom:1.5px solid var(--accent-strong);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.menu option{background:var(--bg-tertiary);color:var(--label)}
+.list-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 12px;margin:0 4px 10px}
+.count-line{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);font-variant-numeric:tabular-nums}
+
+/* job posting card */
+.cards{display:grid;gap:12px}
+.gcard{background:var(--bg-grouped-secondary);border-radius:var(--radius-lg);padding:16px;display:grid;gap:14px;scroll-margin-top:16px;min-width:0}
+.gcard.is-out .g-title{color:var(--label-secondary);text-decoration:line-through}
+.g-head{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:start}
+.g-title{border:0;background:none;padding:0;text-align:left;cursor:pointer;font:600 17px/22px var(--font-sans);letter-spacing:-.43px;color:var(--label);display:inline-flex;gap:4px;align-items:flex-start}
+.g-title .ic{width:18px;height:18px;margin-top:2px;color:var(--gray3);transition:transform .2s}
+.g-title[aria-expanded="true"] .ic{transform:rotate(90deg)}
+@media (hover:hover){.g-title:hover{color:var(--accent-strong)}}
+.g-sub{margin:2px 0 8px;font:400 15px/20px var(--font-sans);letter-spacing:-.23px;color:var(--label-secondary)}
+.g-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pub{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);white-space:nowrap}
+.g-fit{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:66px}
+.fit-label{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary)}
+.pchip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:3px 10px 3px 3px;border:0;border-radius:999px;background:var(--fill-quaternary);cursor:pointer;font:400 15px/20px var(--font-sans);letter-spacing:-.23px;color:var(--label)}
+.pchip .score-pill{min-width:0;padding:0 2px;background:none}
+.pchip .ic{width:14px;height:14px;color:var(--green-strong)}
+@media (hover:hover){.pchip:hover{background:var(--fill-tertiary)}}
+.multi{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:var(--tint-indigo);color:var(--indigo);font:600 13px/18px var(--font-sans);letter-spacing:-.08px}
+.multi .ic{width:16px;height:16px}
+.g-contact{background:var(--bg-grouped-tertiary);border-radius:var(--radius-sm);padding:10px 12px 10px 14px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.who{display:grid;gap:1px;min-width:0}
+.who-n{font:600 15px/20px var(--font-sans);letter-spacing:-.23px;overflow-wrap:anywhere}
+.who-d{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);overflow-wrap:anywhere}
+.g-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;min-width:0}
+.nextstep{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 12px;border-radius:var(--radius-sm);background:var(--tint-blue);font:400 15px/20px var(--font-sans);letter-spacing:-.23px}
+@media (max-width:640px){
+  .g-head{grid-template-columns:52px minmax(0,1fr);gap:12px}
+  .g-side{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}
+  .g-fit{padding-left:0}
+  .g-actions{justify-content:flex-start}
 }
 
-/* project rows */
-.plist{display:grid;gap:10px}
-.proj{background:var(--surface);border:1px solid var(--line);border-radius:12px;scroll-margin-top:16px}
-.proj.is-out .proj-title{text-decoration:line-through;color:var(--muted)}
-.proj-head{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:18px;padding:16px 18px;align-items:start}
-@media (max-width:680px){.proj-head{grid-template-columns:58px minmax(0,1fr);gap:12px;padding:14px}.score .num small{display:none}.proj-side{grid-column:1/-1;flex-direction:row!important;justify-content:space-between;align-items:center!important}}
-.score{display:grid;gap:6px}
-.score .num{font:600 1.55rem/1 var(--f-data);font-variant-numeric:tabular-nums}
-.score .num small{font-size:.7rem;color:var(--muted);font-weight:400}
-.segs{display:flex;gap:2px}
-.segs i{flex:1;height:6px;border-radius:1px;background:var(--sunken)}
-.score.tone-good{background:none}.score.tone-mid{background:none}.score.tone-low{background:none}
-.score.tone-good .num{color:var(--good)}.score.tone-good .segs i.on{background:var(--good)}
-.score.tone-mid .num{color:var(--accent)}.score.tone-mid .segs i.on{background:var(--accent)}
-.score.tone-low .num{color:var(--warn)}.score.tone-low .segs i.on{background:var(--warn)}
-.proj-title{border:0;background:none;padding:0;text-align:left;cursor:pointer;font:700 1.05rem/1.3 var(--f-body);color:var(--ink)}
-.proj-title:hover{color:var(--accent)}
-.proj-sub{margin:3px 0 10px;color:var(--muted);font-size:.9rem}
-.proj-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.pub{font:400 .75rem/1 var(--f-data);color:var(--muted);white-space:nowrap}
-.rm{display:inline-flex;align-items:center;gap:6px}
-.rm-bar{position:relative;width:46px;height:6px;border-radius:3px;background:color-mix(in srgb,currentColor 20%,transparent)}
-.rm-bar i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:currentColor}
-.rm-bar b{position:absolute;left:70%;top:-3px;bottom:-3px;width:1.5px;background:var(--ink);opacity:.55}
-.proj-body{border-top:1px solid var(--line);padding:18px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px}
-@media (max-width:780px){.proj-body{grid-template-columns:minmax(0,1fr);gap:20px}}
-.proj-body p{margin:0;max-width:68ch}
-.proj-body .blk{display:grid;gap:6px}
-.proj-body .blk + .blk{margin-top:18px}
-.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;font-size:.9rem}
-.kv dt{color:var(--muted)}
+/* composer */
+.composer{background:var(--bg-grouped-tertiary);border-radius:var(--radius-sm);padding:14px;display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:18px}
+@media (max-width:820px){.composer{grid-template-columns:minmax(0,1fr)}}
+.ilist{list-style:none;margin:0;padding:0;background:var(--bg-grouped-secondary);border-radius:var(--radius-sm);overflow:hidden}
+.ilist > li{position:relative}
+.ilist > li + li::before{content:"";position:absolute;top:0;left:var(--sep,16px);right:0;height:.5px;background:var(--separator)}
+.crow{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;cursor:pointer}
+.ilist.cands{--sep:50px}
+.crow input{position:absolute;opacity:0;pointer-events:none}
+.crow-main{flex:1;min-width:0;display:grid}
+.crow-t{font:400 17px/22px var(--font-sans)}
+.crow-s{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary)}
+.tick{width:22px;height:22px;color:var(--accent-strong);opacity:0}
+.tick .ic{width:22px;height:22px}
+.crow input:checked ~ .tick{opacity:1}
+.crow:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:-3px;border-radius:var(--radius-sm)}
+.mf{display:grid;gap:4px;min-width:0}
+.mf-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mf-h > span{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);text-transform:uppercase}
+.mf pre{margin:0;background:var(--bg-grouped-secondary);border-radius:var(--radius-sm);padding:10px 12px;font:400 15px/21px var(--font-sans);letter-spacing:-.23px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto}
+
+/* details */
+.g-details{border-top:.5px solid var(--separator);padding-top:16px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px}
+@media (max-width:820px){.g-details{grid-template-columns:minmax(0,1fr);gap:20px}}
+.d-col{display:grid;gap:8px;align-content:start;min-width:0}
+.d-col .sec-hdr:not(:first-child){margin-top:12px}
+.fitlist{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.fit-h{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-bottom:4px}
+.fit-h strong{font:600 15px/20px var(--font-sans);letter-spacing:-.23px}
+.fitlist p,.d-col > p{font:400 15px/21px var(--font-sans);letter-spacing:-.23px;max-width:68ch}
+.reqs{margin:0;padding-left:20px;display:grid;gap:4px;font:400 15px/21px var(--font-sans);letter-spacing:-.23px}
+.kv{margin:0;background:var(--bg-grouped-tertiary);border-radius:var(--radius-sm);overflow:hidden}
+.kv > div{display:grid;grid-template-columns:minmax(96px,auto) minmax(0,1fr);gap:12px;padding:9px 12px;font:400 15px/20px var(--font-sans);letter-spacing:-.23px;position:relative}
+.kv > div + div::before{content:"";position:absolute;top:0;left:12px;right:0;height:.5px;background:var(--separator)}
+.kv dt{color:var(--label-secondary)}
 .kv dd{margin:0;overflow-wrap:anywhere}
-.contact{display:grid;gap:4px;font-size:.92rem}
-.contact .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.linkcopy{border:0;background:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:.78rem;text-decoration:underline}
-.note textarea{width:100%;min-height:76px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 10px;font-size:.9rem}
-.note .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:.78rem;color:var(--muted)}
+.note-box textarea,.field textarea,.field input,#import-json{width:100%;border:0;border-radius:var(--radius-sm);background:var(--fill-tertiary);padding:10px 12px;font:400 15px/21px var(--font-sans);letter-spacing:-.23px;resize:vertical}
+.note-box textarea{min-height:76px}
+.note-box .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+.codebox{position:relative;min-width:0}
+.codebox pre{margin:0;max-height:360px;overflow:auto;background:var(--bg-grouped-tertiary);border-radius:var(--radius-sm);padding:12px 14px;font:400 13px/19px var(--font-mono);letter-spacing:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.codebox.prose pre{font:400 15px/21px var(--font-sans);letter-spacing:-.23px}
+.codebox .btn{position:absolute;top:8px;right:8px;background:var(--bg-grouped-secondary)}
+.codebox pre{padding-right:110px}
+@media (max-width:600px){.codebox{display:flex;flex-direction:column-reverse;gap:8px}.codebox .btn{position:static;align-self:flex-start}.codebox pre{padding-right:14px}}
 
-/* status select */
-.st{position:relative;display:inline-flex;border-radius:999px;background:var(--st-bg,var(--sunken));color:var(--st-fg,var(--ink))}
-.st select{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font-weight:600;font-size:.8rem;padding:5px 26px 5px 11px;border-radius:999px;cursor:pointer}
-.st select:disabled{cursor:default}
-.st::after{content:"";position:absolute;right:11px;top:50%;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg);pointer-events:none}
-.st option{background:var(--surface);color:var(--ink)}
-.st[data-st="neu"]{--st-bg:var(--sunken);--st-fg:var(--muted)}
-.st[data-st="vorgemerkt"]{--st-bg:var(--accent-soft);--st-fg:var(--accent)}
-.st[data-st="gesendet"]{--st-bg:var(--accent);--st-fg:var(--accent-ink)}
-.st[data-st="gespraech"]{--st-bg:var(--warn-soft);--st-fg:var(--warn)}
-.st[data-st="zusage"]{--st-bg:var(--good);--st-fg:var(--surface)}
-.st[data-st="verworfen"]{--st-bg:var(--bad-soft);--st-fg:var(--bad)}
-
-/* empty + info */
-.empty{padding:32px 28px;display:grid;gap:14px;justify-items:start}
-.empty h2{font-size:1.35rem;font-weight:740;font-stretch:90%}
-.empty p{margin:0;max-width:62ch;color:var(--muted)}
-.steps{margin:0;padding-left:20px;display:grid;gap:6px;max-width:66ch}
-.skel{height:58px;border-radius:10px;background:var(--sunken);opacity:.7}
+/* berater view */
+.split{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:960px){.split{grid-template-columns:minmax(0,1fr);gap:16px}}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);max-height:calc(100vh - 140px);overflow:auto;border-radius:var(--radius-lg)}
+.rail .ilist{border-radius:var(--radius-lg);--sep:52px}
+.rrow{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:8px 14px 8px 16px;border:0;background:transparent;text-align:left;cursor:pointer;color:inherit}
+.rrow[aria-current="true"]{background:var(--tint-blue)}
+.rrow-main{flex:1;min-width:0;display:grid}
+.rrow-t{display:flex;gap:6px;align-items:center;font:400 17px/22px var(--font-sans);overflow:hidden}
+.rrow-t > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow-s{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .chev{width:14px;height:14px;color:var(--gray3)}
+@media (max-width:960px){
+  .rail{position:static;max-height:none;overflow:visible}
+  .rail .ilist{display:flex;overflow-x:auto;background:transparent;gap:8px;border-radius:0;scroll-snap-type:x proximity;padding-bottom:4px}
+  .rail .ilist > li{flex:0 0 240px;scroll-snap-align:start}
+  .rail .ilist > li + li::before{display:none}
+  .rrow{background:var(--bg-grouped-secondary);border-radius:var(--radius-md)}
+  .rrow .chev{display:none}
+}
+.main{display:grid;gap:16px;min-width:0}
+.profile{display:grid;gap:14px}
+.pf-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.pf-head > div{flex:1;min-width:180px}
+.pf-role{font:400 16px/21px var(--font-sans);letter-spacing:-.31px;color:var(--label-secondary);margin-top:2px}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px 20px;margin:0}
+.facts dt{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary)}
+.facts dd{margin:0;font:400 15px/20px var(--font-sans);letter-spacing:-.23px;overflow-wrap:anywhere}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font:400 15px/20px var(--font-sans);letter-spacing:-.23px}
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1180px){.sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.sum{grid-template-columns:minmax(0,1fr)}}
+.scard{display:flex;flex-direction:column;gap:10px}
+.scard.wide{grid-column:1/-1}
+.scard > p{font:400 15px/21px var(--font-sans);letter-spacing:-.23px;max-width:90ch}
+.reflist{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.ref{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:baseline;width:100%;border:0;background:transparent;padding:6px 8px;margin:0 -8px;border-radius:var(--radius-sm);text-align:left;cursor:pointer;font:400 15px/20px var(--font-sans);letter-spacing:-.23px;color:var(--label);width:calc(100% + 16px)}
+@media (hover:hover){.ref:hover{background:var(--fill-quaternary)}}
+.risks{margin:0;padding-left:18px;display:grid;gap:6px;font:400 15px/20px var(--font-sans);letter-spacing:-.23px}
+.export{display:grid;gap:12px}
+.toggle-row{display:inline-flex;align-items:center;gap:10px;font:400 15px/20px var(--font-sans);letter-spacing:-.23px;cursor:pointer}
+.switch{appearance:none;-webkit-appearance:none;margin:0;width:51px;height:28px;border-radius:999px;background:var(--fill-secondary);position:relative;flex:none;cursor:pointer;transition:background .2s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:var(--shadow-thumb);transition:left .2s}
+.switch:checked{background:var(--green)}
+.switch:checked::after{left:25px}
+.switch:disabled{opacity:.4}
 
 /* pipeline */
-.pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
-@media (max-width:1100px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:600px){.pipe{grid-template-columns:minmax(0,1fr)}}
-.lane{display:grid;gap:8px;min-width:0}
-.lane-head{display:flex;justify-content:space-between;align-items:center;padding:0 2px}
-.lane-head h3{font-size:1rem;font-weight:720;font-stretch:90%}
-.card{padding:12px 14px;display:grid;gap:8px}
-.card .t{font-weight:700;line-height:1.3;border:0;background:none;padding:0;text-align:left;cursor:pointer}
-.card .t:hover{color:var(--accent)}
-.card .meta{font-size:.82rem;color:var(--muted)}
-.card .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.lane-empty{border:1px dashed var(--line);border-radius:12px;padding:14px;font-size:.85rem;color:var(--muted)}
+.lead{font:400 15px/21px var(--font-sans);letter-spacing:-.23px;color:var(--label-secondary);max-width:80ch;margin:0 4px 16px}
+.lanes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:1180px){.lanes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.lanes{grid-template-columns:minmax(0,1fr)}}
+.lane{display:grid;gap:10px;min-width:0}
+.lane-h{display:flex;justify-content:space-between;align-items:center;padding:0 6px}
+.cnt{font:600 13px/18px var(--font-rounded);font-variant-numeric:tabular-nums;color:var(--label-secondary);background:var(--fill-tertiary);padding:1px 9px;border-radius:999px}
+.pcard{display:grid;gap:10px}
+.pc-top{display:flex;gap:10px;align-items:flex-start}
+.pc-title{border:0;background:none;padding:0;text-align:left;cursor:pointer;font:600 15px/20px var(--font-sans);letter-spacing:-.23px;color:var(--label)}
+@media (hover:hover){.pc-title:hover{color:var(--accent-strong)}}
+.pc-sub,.pc-line{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary)}
+.pc-line strong{color:var(--label);font-weight:600}
+.lane-empty{border-radius:var(--radius-md);padding:14px 16px;font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);background:var(--fill-quaternary)}
 
-/* anbindung */
-.conn{display:grid;gap:20px}
-.conn-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-@media (max-width:900px){.conn-grid{grid-template-columns:minmax(0,1fr)}}
-.conn .panel{padding:20px 22px;display:grid;gap:12px;align-content:start;min-width:0}
-.conn h2{font-size:1.2rem;font-weight:740;font-stretch:90%}
-.conn p{margin:0;max-width:66ch}
-.codebox{position:relative;min-width:0}
-.codebox pre{margin:0;max-height:340px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font:400 .78rem/1.55 var(--f-data);white-space:pre-wrap;overflow-wrap:anywhere}
-.codebox .btn{position:absolute;top:8px;right:8px;padding:4px 10px;font-size:.78rem}
-.urlrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.urlrow code{font:400 .82rem var(--f-data);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;overflow-wrap:anywhere;min-width:0}
-#import-json{width:100%;min-height:180px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px 14px;font:400 .8rem/1.5 var(--f-data)}
-.msg{font-size:.9rem;padding:8px 12px;border-radius:8px}
-.msg.ok{background:var(--good-soft);color:var(--good)}
-.msg.err{background:var(--bad-soft);color:var(--bad)}
-.schema{width:100%;border-collapse:collapse;font-size:.86rem}
-.schema th,.schema td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-.schema th{font:600 .68rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.schema td:first-child{font-family:var(--f-data);font-size:.8rem;white-space:nowrap}
-.tablewrap{overflow-x:auto}
+/* settings */
+.settings{display:grid;gap:28px}
+.settings .form{max-width:640px}
+.set-sec{display:grid;gap:10px;min-width:0}
+.set-sec > .head{display:grid;gap:4px;margin:0 4px}
+.set-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.set-grid{grid-template-columns:minmax(0,1fr)}}
+.form{border-radius:var(--radius-lg);--sep:16px}
+.frow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:center;min-height:48px;padding:4px 16px;font:400 17px/22px var(--font-sans)}
+.frow input{border:0;background:transparent;padding:8px 0;font:400 17px/22px var(--font-sans);text-align:left;min-width:0;width:100%}
+.frow input::placeholder{color:var(--label-tertiary)}
+@media (max-width:480px){.frow{grid-template-columns:minmax(0,1fr);gap:0;padding-block:8px}.frow > span{font-size:13px;line-height:18px;color:var(--label-secondary)}}
+.field{display:grid;gap:6px;min-width:0}
+.field > label{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);text-transform:uppercase}
+.field textarea{min-height:240px;background:var(--bg-grouped-secondary)}
+.field textarea.short{min-height:190px}
+.field input{background:var(--bg-grouped-secondary);font-size:17px}
+.ph{font:400 12px/16px var(--font-mono);letter-spacing:0;padding:3px 7px;border-radius:var(--radius-xs);background:var(--fill-tertiary)}
+#import-json{min-height:170px;font:400 13px/19px var(--font-mono);letter-spacing:0;background:var(--bg-grouped-secondary)}
+.msg{font:400 15px/20px var(--font-sans);letter-spacing:-.23px;padding:10px 14px;border-radius:var(--radius-sm)}
+.msg.ok{background:var(--tint-green);color:var(--green-strong)}
+.msg.err{background:var(--tint-red);color:var(--red-strong)}
+.tablewrap{overflow-x:auto;background:var(--bg-grouped-secondary);border-radius:var(--radius-lg)}
+.schema{width:100%;border-collapse:collapse;font:400 15px/20px var(--font-sans);letter-spacing:-.23px}
+.schema th,.schema td{text-align:left;padding:10px 16px;vertical-align:top;border-bottom:.5px solid var(--separator)}
+.schema tr:last-child td{border-bottom:0}
+.schema th{font:400 13px/18px var(--font-sans);letter-spacing:-.08px;color:var(--label-secondary);text-transform:uppercase}
+.schema td:first-child{font:400 13px/20px var(--font-mono);letter-spacing:0;white-space:nowrap}
 
-#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:.9rem;box-shadow:var(--shadow);z-index:10;max-width:calc(100% - 32px)}
-@media (prefers-reduced-motion: no-preference){.proj-body{animation:open .16s ease-out}@keyframes open{from{opacity:.4;transform:translateY(-3px)}to{opacity:1;transform:none}}}
+/* empty & loading */
+.empty{display:grid;gap:12px;justify-items:start;padding:24px}
+.empty p{color:var(--label-secondary);max-width:62ch;font:400 15px/21px var(--font-sans);letter-spacing:-.23px}
+.steps{margin:0;padding-left:20px;display:grid;gap:6px;max-width:66ch;font:400 15px/21px var(--font-sans);letter-spacing:-.23px}
+.skel{border-radius:var(--radius-lg);background:var(--bg-grouped-secondary);height:120px}
+.skel.sm{height:96px}
+
+#toast{position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));padding:10px 18px;border-radius:999px;font:600 15px/20px var(--font-sans);letter-spacing:-.23px;color:var(--label);max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion: no-preference){.g-details,.composer{animation:open .18s ease-out}@keyframes open{from{opacity:.4;transform:translateY(-3px)}to{opacity:1;transform:none}}}
 </style>
 
 <div class="app">
-  <header class="top">
-    <div class="brand">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.2" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".3"/><circle cx="16" cy="16" r="9.2" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><circle cx="16" cy="16" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16 L16 1.8 A14.2 14.2 0 0 1 28.3 8.9 Z" fill="currentColor" opacity=".22"/><circle cx="22.6" cy="8.3" r="2.1" fill="currentColor"/></svg>
-      <div>
-        <h1>SAP Projektradar</h1>
-        <p class="sub">Freelance-Einsätze für verfügbare SAP-Berater</p>
-      </div>
-    </div>
-    <nav class="tabs" role="tablist" aria-label="Bereiche" id="tabs"></nav>
-  </header>
-  <div id="view"></div>
+  <header class="nav" id="nav"></header>
+  <main id="view"></main>
 </div>
-<div id="toast" role="status" aria-live="polite" hidden></div>
+<nav class="tabbar glass" id="tabbar" aria-label="Bereiche"></nav>
+<div id="toast" class="glass" role="status" aria-live="polite" hidden></div>
 
 <script>
 (() => {
@@ -302,25 +372,55 @@ const STATUS = [
   { k: "verworfen", l: "Verworfen" },
 ];
 const PIPE = ["vorgemerkt", "gesendet", "gespraech", "zusage"];
-const LS_KEY = "sap-projektradar:v1";
+const OFFEN = ["neu", "vorgemerkt"];
+const ANGEBOTEN = ["gesendet", "gespraech", "zusage"];
+const LS_KEY = "sap-projektradar:v2";
 const DAY = 864e5;
+const TABS = [
+  { k: "uebersicht", l: "Übersicht", icon: "list" },
+  { k: "berater", l: "Berater", icon: "person" },
+  { k: "pipeline", l: "Pipeline", icon: "board" },
+  { k: "einstellungen", l: "Einstellungen", icon: "sliders" },
+];
+const ICONS = {
+  list: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4.5" cy="17.5" r="1.2" fill="currentColor" stroke="none"/>',
+  person: '<circle cx="12" cy="8.5" r="3.75"/><path d="M4.75 19.5c1.3-3.2 4-4.75 7.25-4.75s5.95 1.55 7.25 4.75"/>',
+  people: '<circle cx="9" cy="8.5" r="3.25"/><path d="M3 19c1-2.9 3.2-4.4 6-4.4s5 1.5 6 4.4M15.5 5.6a3.25 3.25 0 0 1 0 6.1M17.5 14.9c1.6.6 2.8 1.9 3.5 4.1"/>',
+  board: '<rect x="3.5" y="4.5" width="4.5" height="15" rx="1.5"/><rect x="9.75" y="4.5" width="4.5" height="10" rx="1.5"/><rect x="16" y="4.5" width="4.5" height="12.5" rx="1.5"/>',
+  sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4.5 7.5 7.5 5.5 7.5-5.5"/>',
+  copy: '<rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5v-2a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/>',
+  chevR: '<path d="m9 6 6 6-6 6"/>',
+  ext: '<path d="M14 4.5h5.5V10M19.5 4.5 11 13M18 14v4a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 18V8a1.5 1.5 0 0 1 1.5-1.5h4"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/>',
+  doc: '<path d="M7 3.5h7l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z"/><path d="M14 3.5V8h4.5M9 13h6M9 16.5h4"/>',
+  star: '<path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  warn: '<path d="M12 4.5 20.5 19h-17Z"/><path d="M12 10v4M12 16.8v.1"/>',
+  clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
+  send: '<path d="M20 4 10.5 13.5M20 4l-6 16-3.5-6.5L4 10Z"/>',
+};
+const icon = (n, cls) => `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 
 const state = {
-  tab: "recherchen", runId: null,
-  runs: [], projects: [], status: {}, meta: {},
-  loaded: { runs: false, projects: false }, db: null, dbState: "loading", canWrite: true,
-  filters: { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv", sort: "score" },
-  open: new Set(), drafts: {}, importText: "", importMsg: null, confirmDel: null, busy: false,
-  exp: { open: false, fmt: "kurz", head: true, contact: false }, ptext: new Set(),
-  mailApp: "mailto", mailTpl: {}, anreden: {}, mvOpen: false, mvDraft: null, mailed: new Set(), mailText: new Set(),
+  tab: "uebersicht", runId: null,
+  runs: [], projects: [], status: {}, meta: {}, mailTpl: {}, absender: {}, anreden: {},
+  loaded: { runs: false, projects: false }, db: null, dbState: "loading", canWrite: true, meName: "",
+  filters: { q: "", seg: "alle", zeit: "alle", min: "0", remote: "alle", status: "aktiv", sort: "score" },
+  open: new Set(), comp: new Set(), sel: {}, mailed: new Set(), ptext: new Set(), drafts: {},
+  exp: { open: false, fmt: "kurz", contact: false },
+  mailApp: "outlook", mvDraft: null, absDraft: null,
+  importText: "", importMsg: null, busy: false, confirmDel: null, confirmDemo: false,
 };
 try {
   const s = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-  if (["recherchen", "pipeline", "anbindung"].includes(s.tab)) state.tab = s.tab;
+  if (TABS.some((t) => t.k === s.tab)) state.tab = s.tab;
   if (s.runId) state.runId = s.runId;
   if (s.filters) Object.assign(state.filters, s.filters, { q: "" });
   if (s.exp) Object.assign(state.exp, s.exp);
-  if (["mailto", "gmail", "outlook"].includes(s.mailApp)) state.mailApp = s.mailApp;
+  if (["outlook", "mailto"].includes(s.mailApp)) state.mailApp = s.mailApp;
 } catch (e) {}
 function persist() {
   try { localStorage.setItem(LS_KEY, JSON.stringify({ tab: state.tab, runId: state.runId, filters: { ...state.filters, q: "" }, exp: state.exp, mailApp: state.mailApp })); } catch (e) {}
@@ -331,11 +431,13 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const arr = (x) => Array.isArray(x) ? x.filter((v) => v !== null && v !== undefined && v !== "") : (x === null || x === undefined || x === "" ? [] : [x]);
 const num = (v) => { if (v === null || v === undefined || v === "") return null; const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", ".")); return Number.isFinite(n) ? n : null; };
 const safeUrl = (u) => { try { const x = new URL(String(u)); return x.protocol === "https:" || x.protocol === "http:" ? x.href : null; } catch (e) { return null; } };
-const scoreOf = (p) => { const n = num(p.score); return n === null ? null : Math.max(0, Math.min(10, n)); };
-const remoteOf = (p) => { const n = num(p.remoteAnteil); return n === null ? null : Math.max(0, Math.min(100, n)); };
-const tone = (s) => s === null ? "low" : s >= 8 ? "good" : s >= 6 ? "mid" : "low";
-const fmtScore = (s) => s === null ? "–" : s.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const scoreOf = (p) => { const n = num(p && p.score); return n === null ? null : Math.max(0, Math.min(10, n)); };
+const remoteOf = (p) => { const n = num(p && p.remoteAnteil); return n === null ? null : Math.max(0, Math.min(100, n)); };
+const tone = (s) => s === null || s === undefined ? "low" : s >= 8 ? "good" : s >= 6 ? "mid" : "low";
+const fmtScore = (s) => s === null || s === undefined ? "–" : s.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const listOf = (x) => typeof x === "string" ? x.split(/[,;/]\s*/).map((s) => s.trim()).filter(Boolean) : arr(x).map(String);
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const can = () => state.canWrite && !!state.db;
 
 function parseDate(v) {
   if (!v) return null;
@@ -351,6 +453,7 @@ function fmtDate(v) {
   const d = v instanceof Date ? v : (parseDate(v) || (v && !isNaN(Date.parse(v)) ? new Date(v) : null));
   return d ? d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : (v ? String(v) : "–");
 }
+const dateOrText = (v) => v ? (parseDate(v) ? fmtDate(v) : String(v)) : "";
 function relDay(v) {
   const d = parseDate(v); if (!d) return v ? String(v) : "";
   const n = Math.round((today() - d) / DAY);
@@ -361,36 +464,252 @@ function slug(s) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "x";
 }
 const cleanId = (s) => { if (!s) return null; const t = String(s).replace(/[^A-Za-z0-9_\-.~:@+]/g, "-").slice(0, 180); return /^\.{1,2}$/.test(t) || !t ? null : t; };
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const joinNames = (a) => a.length <= 1 ? a.join("") : `${a.slice(0, -1).join(", ")} und ${a[a.length - 1]}`;
+const NUMW = ["kein", "ein", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"];
+const profileWord = (n) => n === 1 ? "ein passendes Profil" : `${n <= 12 ? NUMW[n] : n} passende Profile`;
+
+const AV = ["indigo", "teal", "orange", "pink", "purple", "brown", "mint", "cyan"];
+function avatar(name, size) {
+  const n = String(name || "?");
+  let h = 7; for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const ini = n.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+  return `<span class="av${size ? " " + size : ""}" style="--av:var(--${AV[h % AV.length]})" aria-hidden="true">${esc(ini)}</span>`;
+}
+function ring(s, size) {
+  const r = 20, c = 2 * Math.PI * r, v = s === null || s === undefined ? 0 : s / 10;
+  return `<div class="ring tone-${tone(s)}${size ? " " + size : ""}" role="img" aria-label="Matching Score ${fmtScore(s)} von 10"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="${r}" class="trk"/><circle cx="24" cy="24" r="${r}" class="val" stroke-dasharray="${(c * v).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 24 24)"/></svg><span aria-hidden="true">${fmtScore(s)}</span></div>`;
+}
 
 const runById = (id) => state.runs.find((r) => r.id === id) || null;
 const projectsOf = (id) => state.projects.filter((p) => p.rechercheId === id);
-const stOf = (pid) => (state.status[pid] && state.status[pid].status) || "neu";
+const stOf = (sid) => (state.status[sid] && state.status[sid].status) || "neu";
 const runsSorted = () => [...state.runs].sort((a, b) => String(b.erstelltAm || "").localeCompare(String(a.erstelltAm || "")) || a.id.localeCompare(b.id));
-const byScore = (a, b) => (scoreOf(b) ?? -1) - (scoreOf(a) ?? -1) || String(a.id).localeCompare(String(b.id));
+const bKey = (run) => slug((run && run.berater && run.berater.name) || "ohne-namen");
 
 function startFit(p, run) {
-  const av = parseDate(run && run.berater && run.berater.verfuegbarAb);
+  const v = run && run.berater && run.berater.verfuegbarAb;
+  const av = /sofort|asap|ab sofort/i.test(String(v || "")) ? today() : parseDate(v);
   if (!av) return null;
   const st = parseDate(p.start);
   const asap = /asap|sofort|zeitnah|immediately|umgehend/i.test(String(p.start || ""));
-  if (st) {
-    return (av - st) / DAY > 14
-      ? { ok: false, text: `Start ${fmtDate(st)} vor Verfügbarkeit` }
-      : { ok: true, text: "Start passt" };
-  }
-  if (asap) {
-    return (av - today()) / DAY > 14
-      ? { ok: false, text: `ASAP-Start, verfügbar erst ${fmtDate(av)}` }
-      : { ok: true, text: "ASAP passt" };
-  }
+  if (st) return (av - st) / DAY > 14 ? { ok: false, text: `Start ${fmtDate(st)} vor Verfügbarkeit` } : { ok: true, text: "Start passt" };
+  if (asap) return (av - today()) / DAY > 14 ? { ok: false, text: `ASAP-Start, verfügbar erst ${fmtDate(av)}` } : { ok: true, text: "ASAP passt" };
   return null;
 }
 
+/* ---------- one posting, many consultants ----------
+   Research runs are per consultant, so the same posting shows up once per run.
+   Postings are merged by their link (tracking parameters dropped), else by platform + reference, else by title. */
+function normLink(u) {
+  const s = safeUrl(u); if (!s) return null;
+  const x = new URL(s);
+  const keep = [...x.searchParams.entries()].filter(([k]) => !/^(utm_|ref$|refid$|source$|src$|trk|campaign|mc_|fbclid|gclid|from$)/i.test(k)).sort(([a], [b]) => a.localeCompare(b));
+  return x.hostname.replace(/^www\./, "").toLowerCase() + x.pathname.replace(/\/+$/, "") + (keep.length ? "?" + keep.map(([k, v]) => `${k}=${v}`).join("&") : "");
+}
+function groupKeyOf(p) {
+  const l = normLink(p.link); if (l) return "url:" + l;
+  if (p.referenz && p.plattform) return "ref:" + slug(p.plattform) + ":" + String(p.referenz).trim().toLowerCase();
+  return "t:" + slug(p.titel) + "|" + slug(p.kunde) + "|" + slug(p.plattform);
+}
+function hashId(s) {
+  let h1 = 0x811c9dc5, h2 = 0x9747b28c;
+  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 ^ c, 2246822507) ^ (h2 >>> 13); }
+  return "a_" + (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36);
+}
+let G = null; const P2S = new Map();
+function groups() {
+  if (G) return G;
+  const map = new Map(); P2S.clear();
+  for (const p of state.projects) {
+    const run = runById(p.rechercheId); if (!run) continue;
+    const sid = hashId(groupKeyOf(p)); P2S.set(p.id, sid);
+    if (!map.has(sid)) map.set(sid, { sid, items: [] });
+    map.get(sid).items.push({ p, run });
+  }
+  for (const g of map.values()) finishGroup(g);
+  G = { list: [...map.values()], map };
+  return G;
+}
+function finishGroup(g) {
+  const by = new Map();
+  for (const it of g.items) {
+    const k = bKey(it.run); const s = scoreOf(it.p); const cur = by.get(k);
+    if (!cur || (s ?? -1) > (cur.score ?? -1) || ((s ?? -1) === (cur.score ?? -1) && String(it.run.erstelltAm || "") > String(cur.run.erstelltAm || ""))) {
+      by.set(k, { key: k, name: ((it.run.berater && it.run.berater.name) || "Ohne Namen").trim(), run: it.run, p: it.p, score: s });
+    }
+  }
+  g.berater = [...by.values()].sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.name.localeCompare(b.name, "de"));
+  g.best = g.berater.length ? g.berater[0].score : null;
+  g.p = g.berater.length ? g.berater[0].p : g.items[0].p;
+  const withMail = g.items.find((it) => emailOf(it.p.ansprechpartner));
+  const withName = g.items.find((it) => it.p.ansprechpartner && it.p.ansprechpartner.name);
+  g.contact = ((withMail || withName || { p: g.p }).p.ansprechpartner) || {};
+  g.email = emailOf(g.contact);
+  g.pub = g.items.map((it) => it.p.veroeffentlicht).filter((v) => parseDate(v)).sort((a, b) => parseDate(b) - parseDate(a))[0] || g.p.veroeffentlicht || null;
+  g.beispiel = g.items.every((it) => it.run.beispiel);
+}
+const groupOfProject = (p) => { groups(); const sid = P2S.get(p.id); return sid ? G.map.get(sid) : null; };
+function runItems(run) {
+  const seen = new Map();
+  for (const p of projectsOf(run.id)) {
+    const g = groupOfProject(p); if (!g) continue;
+    const cur = seen.get(g.sid);
+    if (!cur || (scoreOf(p) ?? -1) > (scoreOf(cur.ctx.p) ?? -1)) seen.set(g.sid, { g, ctx: { p, key: bKey(run), run } });
+  }
+  return [...seen.values()];
+}
+const selOf = (g) => { const s = state.sel[g.sid]; return g.berater.filter((b) => (s ? s.has(b.key) : true)); };
+
+/* ---------- mail ---------- */
+const MAIL_APPS = [["outlook", "Outlook im Browser"], ["mailto", "Outlook-App"]];
+const appLabel = () => (MAIL_APPS.find((x) => x[0] === state.mailApp) || MAIL_APPS[0])[1];
+const openLabel = () => state.mailApp === "outlook" ? "In Outlook öffnen" : "In der Outlook-App öffnen";
+const DEFAULT_MAIL = {
+  betreff: "{vorschlag} für Ihre Ausschreibung „{titel}“",
+  text: `{anrede},
+
+ich habe Ihre Ausschreibung „{titel}“ gesehen und möchte Ihnen dafür gerne {profile} anbieten:
+
+{kandidatenliste}
+
+Die vollständigen Unterlagen sende ich Ihnen gerne zu. Bei Rückfragen können Sie sich jederzeit bei mir melden.
+
+Ausschreibung: {link}
+
+Viele Grüße
+{absender}`,
+  angebot: `{anrede},
+
+gerne möchte ich Ihnen für Ihre Ausschreibung „{titel}“ {profile} anbieten:
+
+{kandidatenliste}
+
+Bei Rückfragen können Sie sich jederzeit bei mir melden.
+
+Viele Grüße
+{absender}`,
+};
+const PLACEHOLDERS = ["anrede", "ansprechpartner", "titel", "kunde", "plattform", "link", "start", "laufzeit", "kandidaten", "kandidatenliste", "profile", "vorschlag", "anzahl", "absender"];
+function emailOf(a) { const s = String((a && a.email) || "").trim(); return /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]+$/.test(s) ? s : null; }
+const tplVal = (k) => (state.mailTpl && typeof state.mailTpl[k] === "string" && state.mailTpl[k].trim()) ? state.mailTpl[k] : DEFAULT_MAIL[k];
+const mailTpl = () => ({ betreff: tplVal("betreff"), text: tplVal("text"), angebot: tplVal("angebot") });
+const absStored = () => state.absender || {};
+function absender() { const s = absStored(); return { name: s.name || state.meName || "", firma: s.firma || "", telefon: s.telefon || "", email: s.email || "" }; }
+function absenderBlock() { const a = absender(); return [a.name, a.firma, a.telefon ? `Tel. ${a.telefon}` : "", a.email].filter(Boolean).join("\n"); }
+
+// The contact as a person: strips "(Talent Acquisition)"-style suffixes and a "Herr"/"Frau" prefix,
+// and returns null for companies and teams so they get "Sehr geehrte Damen und Herren".
+function personOf(a) {
+  a = a || {};
+  let name = String(a.name || "").replace(/\s*\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  let g = String(a.anrede || "").trim().toLowerCase();
+  const pre = name.match(/^(herrn?|frau)\b\.?\s*/i);
+  if (pre) { if (!g) g = pre[1].toLowerCase(); name = name.slice(pre[0].length).trim(); }
+  if (!name || /&|\b(gmbh|mbh|ag|se|kg|kgaa|ohg|gbr|ug|ltd|inc|llc|plc|bv|co|team|recruiting|personal|hr|jobs|karriere|support|service)\b/i.test(name)) return null;
+  const anrede = /^(herrn?|mr)\b/.test(g) ? "Herr" : /^(frau|ms|mrs)\b/.test(g) ? "Frau" : "";
+  return { name, key: name.toLowerCase(), anrede, fromData: !!anrede };
+}
+function lastName(name) {
+  const toks = name.split(" "); const isTitle = (t) => /^(prof|dr)\b/i.test(t);
+  const titles = toks.filter(isTitle); const rest = toks.filter((t) => !isTitle(t));
+  let i = rest.length - 1;
+  while (i > 0 && /^(von|van|de|der|den|du|zu|zum|zur|di|da|del|ten|ter)$/i.test(rest[i - 1])) i--;
+  return [...titles, ...rest.slice(i)].join(" ") || name;
+}
+// Herr/Frau comes from the research data or from the choice made once per contact here, never from a first name.
+const genderOf = (ps) => ps ? (ps.anrede || state.anreden[ps.key] || "") : "";
+function salutation(a) {
+  const ps = personOf(a);
+  if (!ps) return "Sehr geehrte Damen und Herren";
+  const g = genderOf(ps);
+  if (g === "Herr") return `Sehr geehrter Herr ${lastName(ps.name)}`;
+  if (g === "Frau") return `Sehr geehrte Frau ${lastName(ps.name)}`;
+  return `Guten Tag ${ps.name}`;
+}
+function contactShort(a) {
+  const ps = personOf(a); if (!ps) return null;
+  const g = genderOf(ps);
+  return g === "Herr" ? `Herrn ${lastName(ps.name)}` : g === "Frau" ? `Frau ${lastName(ps.name)}` : ps.name;
+}
+function anredeSelect(g) {
+  const ps = personOf(g.contact);
+  if (!ps || ps.fromData) return "";
+  const cur = state.anreden[ps.key] || "";
+  return `<span class="st" data-st="${cur ? "neu" : "anrede-offen"}"><select id="an-${g.sid}" data-anrede-for="${esc(ps.key)}" aria-label="Anrede für ${esc(ps.name)}" title="Gilt für alle Ausschreibungen mit ${esc(ps.name)}"${can() ? "" : " disabled"}>
+    <option value=""${cur ? "" : " selected"}>Anrede wählen</option><option value="Herr"${cur === "Herr" ? " selected" : ""}>Herr</option><option value="Frau"${cur === "Frau" ? " selected" : ""}>Frau</option></select></span>`;
+}
+async function saveAnrede(key, value) {
+  const next = { ...state.anreden };
+  if (value) next[key] = value; else delete next[key];
+  state.anreden = next;
+  try { await state.db.doc("meta/anreden").set({ eintraege: Object.entries(next).map(([name, anrede]) => ({ name, anrede })) }); }
+  catch (e) { toast(dbErrorText(e)); }
+}
+function availText(v) {
+  if (!v) return "";
+  if (/sofort|asap/i.test(String(v))) return "ab sofort verfügbar";
+  return `verfügbar ab ${dateOrText(v)}`;
+}
+function candLine(b) {
+  const r = b.run.berater || {};
+  const sen = r.seniority && !String(r.rolle || "").toLowerCase().includes(String(r.seniority).toLowerCase()) ? r.seniority : "";
+  const mods = listOf(r.module);
+  const role = [sen, r.rolle].filter(Boolean).join(" ") + (mods.length ? ` (${mods.join(", ")})` : "");
+  const rest = [role.trim(), availText(r.verfuegbarAb)].filter(Boolean).join(", ");
+  return "• " + [b.name, rest].filter(Boolean).join(" – ");
+}
+function mailVars(g, cands) {
+  const p = g.p; const n = cands.length;
+  return {
+    anrede: salutation(g.contact), ansprechpartner: (g.contact && g.contact.name) || "",
+    titel: p.titel || "", kunde: p.kunde || "", plattform: p.plattform || "", link: safeUrl(p.link) || "",
+    start: dateOrText(p.start), laufzeit: p.laufzeit || "",
+    kandidaten: joinNames(cands.map((b) => b.name)), kandidatenliste: cands.map(candLine).join("\n"),
+    profile: profileWord(n), vorschlag: n === 1 ? "Kandidatenvorschlag" : "Kandidatenvorschläge", anzahl: String(n),
+    absender: absenderBlock(),
+  };
+}
+// Lines whose placeholders resolve to nothing are dropped, so a missing field never leaves "Ausschreibung: " behind.
+function fillTpl(tpl, vars, dropLines) {
+  const rep = (s) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k] ?? "") : m));
+  if (!dropLines) return rep(String(tpl)).replace(/\s{2,}/g, " ").trim();
+  return String(tpl).split(/\r?\n/)
+    .filter((line) => [...line.matchAll(/\{(\w+)\}/g)].every((m) => !(m[1] in vars) || String(vars[m[1]] ?? "").trim()))
+    .map(rep).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+function mailFor(g, tplOverride) {
+  const cands = selOf(g); const t = tplOverride || mailTpl(); const v = mailVars(g, cands);
+  return { to: g.email, n: cands.length, cands, subject: fillTpl(t.betreff, v, false), body: fillTpl(g.email ? t.text : t.angebot, v, true) };
+}
+function mailHref(m) {
+  const e = encodeURIComponent;
+  if (state.mailApp === "outlook") return `https://outlook.office.com/mail/deeplink/compose?to=${e(m.to)}&subject=${e(m.subject)}&body=${e(m.body)}`;
+  return `mailto:${e(m.to).replace(/%40/g, "@")}?subject=${e(m.subject)}&body=${e(m.body.replace(/\n/g, "\r\n"))}`;
+}
+const linkAttrs = () => state.mailApp === "outlook" ? ' target="_blank" rel="noopener noreferrer"' : "";
+
+// One click: with an email address it opens the bundled mail, without one it copies the offer text.
+function mainAction(g, small) {
+  const m = mailFor(g); const cnt = m.n > 1 ? ` · ${m.n} Profile` : "";
+  const cls = `btn bordered${small ? " xs" : ""}`;
+  if (!m.n) return `<button class="${cls}" disabled>Keine Kandidaten gewählt</button>`;
+  if (m.to) {
+    const who = contactShort(g.contact) || m.to;
+    return `<a class="${cls}" href="${esc(mailHref(m))}"${linkAttrs()} data-act="mail" data-id="${g.sid}" title="Vorausgefüllte Mail an ${esc(m.to)} in ${esc(appLabel())} öffnen">${icon("mail")}<span>Mail an ${esc(who)}${cnt}</span></a>`;
+  }
+  return `<button class="${cls}" data-act="copy-offer" data-id="${g.sid}" title="${esc(personOf(g.contact) ? `Keine E-Mail-Adresse bekannt. Kopiert den Angebotstext an ${g.contact.name}.` : "Kein Ansprechpartner genannt. Kopiert den Angebotstext mit „Sehr geehrte Damen und Herren“.")}">${icon("copy")}<span>Angebotstext kopieren${cnt}</span></button>`;
+}
+function nextStep(g) {
+  if (!state.mailed.has(g.sid) || !OFFEN.includes(stOf(g.sid)) || !can()) return "";
+  const names = joinNames(selOf(g).map((b) => b.name));
+  return `<div class="nextstep"><span>${g.email ? "Mail abgeschickt?" : "Text verschickt?"}</span><button class="btn bordered xs" data-act="mark-sent" data-id="${g.sid}">Als „Profil gesendet“ markieren${names ? ` (${esc(names)})` : ""}</button></div>`;
+}
+
+/* ---------- rendering: shared pieces ---------- */
 function toast(text) {
   const t = document.getElementById("toast");
   t.textContent = text; t.hidden = false;
-  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2600);
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2800);
 }
 function dbErrorText(e) {
   const c = e && e.code;
@@ -399,150 +718,147 @@ function dbErrorText(e) {
   if (c === "resource_exhausted") return "Zu viele Änderungen auf einmal. Bitte kurz warten.";
   return "Speichern fehlgeschlagen. Bitte erneut versuchen.";
 }
-
-/* ---------- render: tabs ---------- */
-function renderTabs() {
-  const pipeCount = state.projects.filter((p) => PIPE.includes(stOf(p.id))).length;
-  const tabs = [
-    ["recherchen", "Recherchen", state.runs.length],
-    ["pipeline", "Pipeline", pipeCount],
-    ["anbindung", "Anbindung", null],
-  ];
-  document.getElementById("tabs").innerHTML = tabs.map(([k, l, n]) =>
-    `<button role="tab" id="tab-${k}" aria-selected="${state.tab === k}" data-act="tab" data-tab="${k}">${l}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
+function statusSelect(sid) {
+  const st = stOf(sid);
+  return `<span class="st" data-st="${st}"><select id="st-${sid}" aria-label="Bearbeitungsstand" data-status-for="${sid}"${can() ? "" : " disabled"}>${STATUS.map((s) => `<option value="${s.k}"${s.k === st ? " selected" : ""}>${s.l}</option>`).join("")}</select></span>`;
+}
+function remoteChip(p) {
+  const r = remoteOf(p);
+  if (r === null) return `<span class="chip t-orange" title="${esc(p.remoteHinweis || "Remote-Anteil in der Ausschreibung nicht genannt")}">Remote nicht genannt</span>`;
+  return `<span class="chip ${r >= 70 ? "t-green" : "t-red"}" title="${esc(p.remoteHinweis || `Remote ${r} %`)}">${r} % remote</span>`;
 }
 
-/* ---------- render: recherchen ---------- */
-function renderRail() {
-  const runs = runsSorted();
-  if (!state.loaded.runs) return `<aside class="rail"><div class="skel"></div><div class="skel"></div><div class="skel"></div></aside>`;
-  return `<aside class="rail" aria-label="Recherchen"><div class="rail-label">Recherchen · neueste zuerst</div>${runs.map((r) => {
-    const ps = projectsOf(r.id); const b = r.berater || {};
-    const top = ps.reduce((m, p) => Math.max(m, scoreOf(p) ?? 0), 0);
-    return `<button class="run-btn" data-act="run" data-id="${esc(r.id)}" aria-current="${r.id === state.runId}">
-      <span class="run-name">${esc(b.name || "Ohne Namen")}${r.beispiel ? `<span class="tag-demo">Beispiel</span>` : ""}</span>
-      <span class="run-role">${esc(b.rolle || "")}</span>
-      <span class="run-meta"><span>${esc(fmtDate(r.erstelltAm))}</span><span>${ps.length} Proj.</span>${ps.length ? `<span class="score-pill tone-${tone(top)}">${fmtScore(top)}</span>` : ""}</span>
-    </button>`;
-  }).join("")}</aside>`;
+function renderNav() {
+  const t = TABS.find((x) => x.k === state.tab);
+  const d = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("nav").innerHTML = `<div><p class="eyebrow">SAP Projektradar · ${esc(d)}</p><h1>${esc(t.l)}</h1></div>
+    <button class="glassbtn glass" data-act="go-import" aria-label="Recherche einfügen" title="Recherche einfügen">${icon("plus")}</button>`;
+}
+function renderTabbar() {
+  const neu = state.loaded.projects ? groups().list.filter((g) => stOf(g.sid) === "neu").length : 0;
+  document.getElementById("tabbar").innerHTML = TABS.map((t) => `<button type="button" data-act="tab" data-tab="${t.k}"${state.tab === t.k ? ' aria-current="page"' : ""}>${icon(t.icon)}<span>${t.l}</span>${t.k === "uebersicht" && neu ? `<span class="badge" aria-label="${neu} neu">${neu}</span>` : ""}</button>`).join("");
 }
 
-function renderProfile(run) {
-  const b = run.berater || {};
-  const mods = listOf(b.module);
-  const facts = [
-    ["Seniorität", b.seniority], ["Verfügbar ab", b.verfuegbarAb ? fmtDate(b.verfuegbarAb) : null], ["Auslastung", b.auslastung],
-    ["Remote-Wunsch", b.remote], ["Region", b.region], ["Zeitraum", run.zeitraum],
-    ["Recherche vom", run.erstelltAm ? new Date(run.erstelltAm).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null],
-    ["Plattformen", listOf(run.plattformen).join(", ")],
-  ].filter(([, v]) => v);
-  const confirming = state.confirmDel === run.id;
-  return `<section class="panel profile" aria-label="Beraterprofil">
-    ${run.beispiel ? `<div class="demo-note"><span>Beispieldaten zur Ansicht. Diese Recherche ist erfunden und kann gelöscht werden, sobald echte Ergebnisse da sind.</span></div>` : ""}
-    <div class="profile-head">
-      <div>
-        <p class="eyebrow">Beraterprofil</p>
-        <h2>${esc(b.name || "Ohne Namen")}</h2>
-        <p class="role">${esc(b.rolle || "")}</p>
-      </div>
-      ${state.canWrite && state.db ? (confirming
-        ? `<div class="confirm"><span>Recherche mit ${projectsOf(run.id).length} Projekten löschen?</span><button class="btn danger" data-act="del-run" data-id="${esc(run.id)}"${state.busy ? " disabled" : ""}>Endgültig löschen</button><button class="btn ghost" data-act="del-cancel">Abbrechen</button></div>`
-        : `<button class="btn ghost" data-act="del-ask" data-id="${esc(run.id)}">Recherche löschen</button>`) : ""}
-    </div>
-    ${mods.length ? `<div class="chips" aria-label="Module">${mods.map((m) => `<span class="chip mod">${esc(m)}</span>`).join("")}</div>` : ""}
-    ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
-  </section>`;
-}
-
-function resolveRefs(list, ps) {
-  return arr(list).map((x) => {
-    const s = String(x);
-    const p = ps.find((q) => q.id === s) || ps.find((q) => String(q.titel || "").trim().toLowerCase() === s.trim().toLowerCase());
-    return p ? { p } : { text: s };
-  });
-}
-function refItem(r, i, ranked) {
-  if (r.p) {
-    const s = scoreOf(r.p);
-    return `<li><button data-act="jump" data-id="${esc(r.p.id)}">${ranked ? `<span class="rank">${i + 1}</span>` : ""}<span class="score-pill tone-${tone(s)}">${fmtScore(s)}</span><span class="t">${esc(r.p.titel || "Ohne Titel")}</span></button></li>`;
-  }
-  return `<li><span class="t">${esc(r.text)}</span></li>`;
-}
-
-function renderSummary(run, ps) {
-  const z = run.zusammenfassung || {};
-  const remoteOk = ps.filter((p) => (remoteOf(p) ?? -1) >= 70).length;
-  const remoteNg = ps.filter((p) => remoteOf(p) === null).length;
-  const s4 = ps.filter((p) => p.s4hana === true).length;
-  let top = resolveRefs(z.top3, ps);
-  if (!top.length) top = [...ps].sort(byScore).slice(0, 3).map((p) => ({ p }));
-  const chances = resolveRefs(z.hoheErfolgswahrscheinlichkeit, ps);
-  const risks = arr(z.risiken);
-  const alts = arr(run.alternativen);
-  return `<section class="panel summary" aria-label="Management-Zusammenfassung">
-    <section>
-      <p class="eyebrow">Gefunden</p>
-      <div class="big">${ps.length}</div>
-      <div class="big-sub"><span>${remoteOk} mit ≥ 70 % Remote</span><span>${remoteNg} ohne Remote-Angabe</span><span>${s4} S/4HANA</span></div>
-    </section>
-    <section>
-      <p class="eyebrow">Top-3-Matches</p>
-      ${top.length ? `<ol class="toplist">${top.slice(0, 3).map((r, i) => refItem(r, i, true)).join("")}</ol>` : `<p class="muted">Keine Treffer.</p>`}
-    </section>
-    <section>
-      <p class="eyebrow">Hohe Erfolgschance</p>
-      ${chances.length ? `<ul class="toplist">${chances.map((r, i) => refItem(r, i, false)).join("")}</ul>` : `<p class="muted">Keine Angabe.</p>`}
-    </section>
-    <section>
-      <p class="eyebrow">Risiken</p>
-      ${risks.length ? `<ul class="plain risks">${risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : `<p class="muted">Keine genannt.</p>`}
-    </section>
-    ${z.fazit ? `<div class="fazit">${esc(z.fazit)}</div>` : ""}
-    ${alts.length || !ps.length ? `<div class="alts"><p class="eyebrow">Alternative Suchbegriffe, Module und Rollen</p>${alts.length ? `<div class="chips">${alts.map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</div>` : `<p class="muted">Keine Vorschläge hinterlegt.</p>`}</div>` : ""}
-  </section>`;
-}
-
-function renderFilters(ps) {
+function toolbar() {
   const f = state.filters;
-  const plats = [...new Set(ps.map((p) => p.plattform).filter(Boolean))].sort();
-  const opt = (v, l, cur) => `<option value="${esc(v)}"${String(cur) === String(v) ? " selected" : ""}>${esc(l)}</option>`;
-  return `<div class="filters" role="search">
-    <div class="field search"><label for="f-q">Suche</label><input id="f-q" type="search" placeholder="Titel, Kunde, Skill …" value="${esc(f.q)}" autocomplete="off"></div>
-    <div class="field"><label for="f-min">Score</label><select id="f-min" data-filter="min">${[["0", "Alle"], ["6", "ab 6"], ["7", "ab 7"], ["8", "ab 8"], ["9", "ab 9"]].map(([v, l]) => opt(v, l, f.min)).join("")}</select></div>
-    <div class="field"><label for="f-remote">Remote</label><select id="f-remote" data-filter="remote">${[["alle", "Alle"], ["ok", "≥ 70 %"], ["ng", "Nicht genannt"]].map(([v, l]) => opt(v, l, f.remote)).join("")}</select></div>
-    <div class="field"><label for="f-plattform">Plattform</label><select id="f-plattform" data-filter="plattform">${opt("alle", "Alle", f.plattform)}${plats.map((p) => opt(p, p, f.plattform)).join("")}</select></div>
-    <div class="field"><label for="f-status">Status</label><select id="f-status" data-filter="status">${opt("aktiv", "Ohne verworfene", f.status)}${opt("alle", "Alle", f.status)}${STATUS.map((s) => opt(s.k, s.l, f.status)).join("")}</select></div>
-    <div class="field"><label for="f-sort">Sortierung</label><select id="f-sort" data-filter="sort">${[["score", "Matching Score"], ["datum", "Neueste zuerst"], ["remote", "Remote-Anteil"]].map(([v, l]) => opt(v, l, f.sort)).join("")}</select></div>
+  const sel = (id, key, label, opts) => `<span class="menu"><select id="${id}" data-filter="${key}" aria-label="${label}">${opts.map(([v, l]) => `<option value="${v}"${String(f[key]) === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></span>`;
+  return `<div class="toolbar" role="search">
+    <div class="search">${icon("search")}<input id="f-q" type="search" placeholder="Titel, Kunde, Skill oder Berater" value="${esc(f.q)}" autocomplete="off" aria-label="Suche"></div>
+    <div class="seg" role="group" aria-label="Auswahl">${[["alle", "Alle"], ["mehrere", "Mehrere Berater"], ["offen", "Offen"]].map(([v, l]) => `<button type="button" id="seg-${v}" data-act="seg" data-v="${v}" aria-pressed="${f.seg === v}">${l}</button>`).join("")}</div>
+    <div class="menus">
+      ${sel("f-zeit", "zeit", "Veröffentlicht", [["alle", "Jeder Zeitraum"], ["0", "Heute veröffentlicht"], ["3", "Letzte 3 Tage"], ["7", "Letzte 7 Tage"], ["30", "Letzte 30 Tage"]])}
+      ${sel("f-min", "min", "Matching Score", [["0", "Alle Scores"], ["6", "Score ab 6"], ["7", "Score ab 7"], ["8", "Score ab 8"], ["9", "Score ab 9"]])}
+      ${sel("f-remote", "remote", "Remote-Anteil", [["alle", "Remote: alle"], ["ok", "Remote ≥ 70 %"], ["ng", "Remote nicht genannt"]])}
+      ${sel("f-status", "status", "Bearbeitungsstand", [["aktiv", "Ohne verworfene"], ["alle", "Alle Status"], ...STATUS.map((s) => [s.k, s.l])])}
+      ${sel("f-sort", "sort", "Sortierung", [["score", "Nach Score"], ["datum", "Neueste zuerst"], ["berater", "Meiste Berater"]])}
+    </div>
   </div>`;
 }
-
-function applyFilters(ps) {
-  const f = state.filters; const q = f.q.trim().toLowerCase(); const min = +f.min || 0;
-  const out = ps.filter((p) => {
-    if ((scoreOf(p) ?? 0) < min) return false;
+function applyFilters(items) {
+  const f = state.filters; const q = f.q.trim().toLowerCase(); const min = +f.min || 0; const t0 = today();
+  const sc = (it) => it.ctx ? scoreOf(it.ctx.p) : it.g.best;
+  const out = items.filter((it) => {
+    const g = it.g; const p = it.ctx ? it.ctx.p : g.p;
+    if ((sc(it) ?? 0) < min) return false;
     const r = remoteOf(p);
     if (f.remote === "ok" && !(r !== null && r >= 70)) return false;
     if (f.remote === "ng" && r !== null) return false;
-    if (f.plattform !== "alle" && (p.plattform || "") !== f.plattform) return false;
-    const st = stOf(p.id);
+    if (f.zeit !== "alle") { const d = parseDate(g.pub); if (!d || (t0 - d) / DAY > +f.zeit) return false; }
+    const st = stOf(g.sid);
+    if (f.seg === "mehrere" && g.berater.length < 2) return false;
+    if (f.seg === "offen" && !OFFEN.includes(st)) return false;
     if (f.status === "aktiv" && st === "verworfen") return false;
     if (f.status !== "aktiv" && f.status !== "alle" && st !== f.status) return false;
     if (q) {
-      const hay = [p.titel, p.kunde, p.einsatzort, p.passung, p.plattform, ...arr(p.anforderungen)].join(" ").toLowerCase();
+      const hay = [p.titel, p.kunde, p.einsatzort, p.passung, p.plattform, g.contact && g.contact.name, ...arr(p.anforderungen), ...g.berater.map((b) => b.name)].join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
-  const dv = (p) => { const d = parseDate(p.veroeffentlicht); return d ? +d : 0; };
-  const sorters = {
-    score: byScore,
-    datum: (a, b) => dv(b) - dv(a) || byScore(a, b),
-    remote: (a, b) => (remoteOf(b) ?? -1) - (remoteOf(a) ?? -1) || byScore(a, b),
-  };
-  return out.sort(sorters[f.sort] || byScore);
+  const dv = (it) => { const d = parseDate(it.g.pub); return d ? +d : 0; };
+  const byS = (a, b) => (sc(b) ?? -1) - (sc(a) ?? -1) || String(a.g.p.titel || "").localeCompare(String(b.g.p.titel || ""), "de");
+  const sorters = { score: byS, datum: (a, b) => dv(b) - dv(a) || byS(a, b), berater: (a, b) => b.g.berater.length - a.g.berater.length || byS(a, b) };
+  return out.sort(sorters[f.sort] || byS);
 }
 
-/* ---------- plain-text export for forwarding ---------- */
+/* ---------- the posting card ---------- */
+function contactLine(g) {
+  const a = g.contact || {};
+  if (!a.name && !g.email && !a.telefon) return `<div class="who"><span class="who-n">Kein Ansprechpartner genannt</span><span class="who-d">Der Text beginnt mit „Sehr geehrte Damen und Herren“</span></div>`;
+  const d = [g.email ? `<span class="mono">${esc(g.email)}</span>` : "keine E-Mail-Adresse", a.telefon ? esc(a.telefon) : ""].filter(Boolean).join(" · ");
+  return `<div class="who"><span class="who-n">${esc(a.name || g.email || "")}</span><span class="who-d">${d}</span></div>`;
+}
+function groupCard(g, ctx) {
+  const p = ctx ? ctx.p : g.p; const s = ctx ? scoreOf(ctx.p) : g.best;
+  const st = stOf(g.sid); const open = state.open.has(g.sid); const comp = state.comp.has(g.sid);
+  const offered = arr((state.status[g.sid] || {}).angeboten);
+  const others = ctx ? g.berater.filter((b) => b.key !== ctx.key) : g.berater;
+  const land = p.land && String(p.land).toUpperCase() !== "DE" ? String(p.land).toUpperCase() : null;
+  const chips = [
+    p.plattform ? `<span class="chip">${esc(p.plattform)}</span>` : "",
+    p.s4hana === true ? `<span class="chip t-blue">S/4HANA</span>` : "",
+    remoteChip(p),
+    land ? `<span class="chip${land === "CH" ? " t-orange" : ""}" title="${land === "CH" ? "Schweiz: nur Utilities oder nach Freigabe" : ""}">${esc(land)}</span>` : "",
+    p.start ? `<span class="chip">Start ${esc(dateOrText(p.start))}</span>` : "",
+    p.laufzeit ? `<span class="chip">${esc(p.laufzeit)}</span>` : "",
+  ].join("");
+  const pchip = (b) => {
+    const bs = ctx && b.key === ctx.key ? s : b.score;
+    return `<button class="pchip" data-act="goto-run" data-run="${esc(b.run.id)}" title="Recherche von ${esc(b.name)} öffnen">${avatar(b.name)}<span>${esc(b.name)}</span><span class="score-pill tone-${tone(bs)}">${fmtScore(bs)}</span>${offered.includes(b.name) ? `<span title="bereits angeboten">${icon("check")}</span>` : ""}</button>`;
+  };
+  const fitRow = ctx
+    ? (others.length ? `<div class="g-fit"><span class="fit-label">Passt auch zu</span>${others.map(pchip).join("")}<span class="multi">${icon("people")}Eine Mail für alle</span></div>` : "")
+    : `<div class="g-fit"><span class="fit-label">${g.berater.length > 1 ? `Passt zu ${g.berater.length} Beratern` : "Passt zu"}</span>${g.berater.map(pchip).join("")}${g.berater.length > 1 ? `<span class="multi">${icon("people")}Eine Mail für alle</span>` : ""}</div>`;
+  const sub = [p.kunde, p.einsatzort].filter(Boolean).map(esc).join(" · ");
+  return `<article class="gcard${st === "verworfen" ? " is-out" : ""}" id="g-${g.sid}">
+    <div class="g-head">
+      ${ring(s)}
+      <div style="min-width:0">
+        <button class="g-title" data-act="toggle" data-id="${g.sid}" aria-expanded="${open}" aria-controls="gd-${g.sid}"><span>${esc(p.titel || "Ohne Titel")}</span>${icon("chevR")}</button>
+        ${sub ? `<p class="g-sub">${sub}</p>` : `<div style="height:8px"></div>`}
+        <div class="chips">${chips}${g.beispiel ? `<span class="tag">Beispiel</span>` : ""}</div>
+      </div>
+      <div class="g-side">${statusSelect(g.sid)}<span class="pub" title="Veröffentlicht ${esc(fmtDate(g.pub))}">${g.pub ? `veröff. ${esc(relDay(g.pub))}` : "Datum fehlt"}</span></div>
+    </div>
+    ${fitRow}
+    <div class="g-contact">
+      ${contactLine(g)}
+      <div class="g-actions">${anredeSelect(g)}${mainAction(g)}<button class="btn plain xs" data-act="comp" data-id="${g.sid}" aria-expanded="${comp}">${comp ? "Schließen" : g.berater.length > 1 ? "Kandidaten & Text" : "Text ansehen"}</button></div>
+    </div>
+    ${nextStep(g)}
+    ${comp ? composer(g) : ""}
+    ${open ? details(g, ctx) : ""}
+  </article>`;
+}
+function composer(g) {
+  const m = mailFor(g); const sel = state.sel[g.sid];
+  const offered = arr((state.status[g.sid] || {}).angeboten);
+  const rows = g.berater.map((b) => {
+    const id = `cb-${g.sid}-${b.key}`; const on = sel ? sel.has(b.key) : true; const r = b.run.berater || {};
+    const fit = startFit(g.p, b.run);
+    const meta = [r.rolle, `Score ${fmtScore(b.score)}`, fit ? fit.text : null, offered.includes(b.name) ? "bereits angeboten" : null].filter(Boolean).join(" · ");
+    return `<li><label class="crow" for="${id}"><input type="checkbox" id="${id}" data-sel="${g.sid}" data-key="${esc(b.key)}"${on ? " checked" : ""}>${avatar(b.name)}<span class="crow-main"><span class="crow-t">${esc(b.name)}</span><span class="crow-s">${esc(meta)}</span></span><span class="tick">${icon("check")}</span></label></li>`;
+  }).join("");
+  const field = (k, label, v) => `<div class="mf"><div class="mf-h"><span>${label}</span><button class="btn plain xs" data-act="copy" data-target="mt-${k}-${g.sid}">${icon("copy")}Kopieren</button></div><pre id="mt-${k}-${g.sid}">${esc(v)}</pre></div>`;
+  const link = safeUrl(g.p.link);
+  const tel = g.contact && g.contact.telefon;
+  return `<section class="composer" aria-label="Nachricht vorbereiten">
+    <div class="stack" style="align-content:start">
+      <div><p class="sec-hdr">Kandidaten in dieser Nachricht</p><ul class="ilist cands">${rows}</ul></div>
+      ${m.to ? `<div><p class="sec-hdr">Öffnen mit</p><div class="seg" role="group" aria-label="Mail öffnen mit">${MAIL_APPS.map(([v, l]) => `<button type="button" id="app-${g.sid}-${v}" data-act="mailapp" data-v="${v}" aria-pressed="${state.mailApp === v}">${l}</button>`).join("")}</div>
+        <p class="hint" style="margin-top:8px">${state.mailApp === "outlook" ? "Öffnet einen neuen Tab mit Outlook im Web (Microsoft 365)." : "Startet die Outlook-App über mailto:. Klappt das aus dem Dashboard heraus nicht, kopiere Betreff und Text."}</p></div>`
+        : `<p class="hint">Keine E-Mail-Adresse bekannt. Kopiere den Text, etwa für das Kontaktformular der Plattform oder eine Nachricht an den Ansprechpartner.${tel ? ` Telefon: ${esc(tel)}` : ""}</p>`}
+    </div>
+    <div class="stack">
+      ${m.n ? `${m.to ? field("to", "An", m.to) + field("su", "Betreff", m.subject) : ""}${field("tx", m.to ? "Text" : "Angebotstext", m.body)}` : `<p class="hint">Wähle mindestens einen Berater aus.</p>`}
+      <div class="actions">
+        ${m.n ? (m.to ? `<a class="btn prominent" href="${esc(mailHref(m))}"${linkAttrs()} data-act="mail" data-id="${g.sid}">${icon("mail")}<span>${openLabel()}</span></a>` : `<button class="btn prominent" data-act="copy-offer" data-id="${g.sid}">${icon("copy")}<span>Text kopieren</span></button>`) : ""}
+        ${can() && m.n ? `<button class="btn bordered" data-act="mark-sent" data-id="${g.sid}">Als gesendet markieren</button>` : ""}
+        ${link ? `<a class="btn plain" href="${esc(link)}" target="_blank" rel="noopener noreferrer"><span>Ausschreibung</span>${icon("ext")}</a>` : ""}
+      </div>
+    </div>
+  </section>`;
+}
 function projText(p, o) {
   const link = safeUrl(p.link) || "Link fehlt";
   if (o.fmt === "kurz") return [p.titel || "Ohne Titel", link];
@@ -553,7 +869,7 @@ function projText(p, o) {
   if (p.kunde) lines.push(`Kunde: ${p.kunde}`);
   const ortHasRemote = r !== null && new RegExp(`\\b${r}\\s?%`).test(String(p.einsatzort || ""));
   lines.push(`Ort: ${[p.einsatzort, ortHasRemote ? null : r === null ? "Remote-Anteil nicht genannt" : `${r} % remote`].filter(Boolean).join(" · ")}`);
-  const when = [p.start ? `Start ${parseDate(p.start) ? fmtDate(p.start) : p.start}` : null, p.laufzeit ? `Laufzeit ${p.laufzeit}` : null].filter(Boolean).join(" · ");
+  const when = [p.start ? `Start ${dateOrText(p.start)}` : null, p.laufzeit ? `Laufzeit ${p.laufzeit}` : null].filter(Boolean).join(" · ");
   if (when) lines.push(when);
   if (p.passung) lines.push(`Passung: ${p.passung}`);
   if (o.contact) {
@@ -564,16 +880,145 @@ function projText(p, o) {
   lines.push(`Link: ${link}`);
   return lines;
 }
+function details(g, ctx) {
+  const p = ctx ? ctx.p : g.p;
+  const order = ctx ? [...g.berater].sort((a, b) => (a.key === ctx.key ? -1 : b.key === ctx.key ? 1 : 0)) : g.berater;
+  const fits = order.map((b) => {
+    const bp = ctx && b.key === ctx.key ? ctx.p : b.p; const fit = startFit(bp, b.run);
+    return `<li><div class="fit-h">${avatar(b.name)}<strong>${esc(b.name)}</strong><span class="score-pill tone-${tone(scoreOf(bp))}">${fmtScore(scoreOf(bp))}</span>${fit ? `<span class="chip ${fit.ok ? "t-green" : "t-red"}">${esc(fit.text)}</span>` : ""}${!ctx || b.key !== ctx.key ? `<button class="btn plain xs" data-act="goto-run" data-run="${esc(b.run.id)}"><span>Recherche</span>${icon("chevR")}</button>` : ""}</div><p>${esc(bp.passung || "Keine Bewertung hinterlegt.")}</p></li>`;
+  }).join("");
+  const reqs = arr(p.anforderungen);
+  const r = remoteOf(p);
+  const kv = [
+    ["Veröffentlicht", g.pub ? `${fmtDate(g.pub)} (${relDay(g.pub)})` : null],
+    ["Start", p.start ? dateOrText(p.start) : null], ["Laufzeit", p.laufzeit], ["Einsatzort", p.einsatzort],
+    ["Remote", (r === null ? "nicht genannt" : `${r} %`) + (p.remoteHinweis ? ` · ${p.remoteHinweis}` : "")],
+    ["Endkunde/Branche", p.kunde], ["Plattform", [p.plattform, p.referenz ? `Nr. ${p.referenz}` : null].filter(Boolean).join(" · ")],
+  ].filter(([, v]) => v);
+  const a = g.contact || {};
+  const st = state.status[g.sid] || {};
+  const draft = state.drafts[g.sid];
+  const note = draft !== undefined ? draft : (st.notiz || "");
+  const link = safeUrl(p.link);
+  const copyRow = (k, v) => `<div><dt>${k}</dt><dd><span id="ct-${k}-${g.sid}">${esc(v)}</span> <button class="btn plain xs" data-act="copy" data-target="ct-${k}-${g.sid}" aria-label="${k} kopieren">${icon("copy")}</button></dd></div>`;
+  return `<div class="g-details" id="gd-${g.sid}">
+    <div class="d-col">
+      <p class="sec-hdr">Passung zum Berater</p><ul class="fitlist">${fits}</ul>
+      <p class="sec-hdr">Anforderungen</p>${reqs.length ? `<ul class="reqs">${reqs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="muted">Keine Angaben.</p>`}
+      <p class="sec-hdr"><label for="note-${g.sid}">Notiz</label></p>
+      <div class="note-box"><textarea id="note-${g.sid}" data-note-for="${g.sid}" placeholder="z. B. Stundensatz, Rückmeldung des Ansprechpartners"${can() ? "" : " disabled"}>${esc(note)}</textarea>
+        <div class="row"><span class="note">${arr(st.angeboten).length ? `Angeboten: ${esc(joinNames(arr(st.angeboten)))}${st.gesendetAm ? ` am ${esc(fmtDate(st.gesendetAm))}` : ""}` : (st.geaendertAm ? `Zuletzt geändert ${esc(new Date(st.geaendertAm).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }))}` : "")}</span>${can() ? `<button class="btn bordered xs" data-act="save-note" data-id="${g.sid}"${draft === undefined ? " disabled" : ""}>Notiz speichern</button>` : ""}</div>
+      </div>
+    </div>
+    <div class="d-col">
+      <p class="sec-hdr">Eckdaten</p><dl class="kv">${kv.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
+      <p class="sec-hdr">Ansprechpartner</p>
+      ${a.name || a.email || a.telefon ? `<dl class="kv">${a.name ? `<div><dt>Name</dt><dd>${esc([a.anrede, a.name].filter(Boolean).join(" "))}</dd></div>` : ""}${a.email ? copyRow("E-Mail", a.email) : ""}${a.telefon ? copyRow("Telefon", a.telefon) : ""}</dl>` : `<p class="muted">Nicht angegeben.</p>`}
+      <div class="actions" style="margin-top:8px">${link ? `<a class="btn bordered" href="${esc(link)}" target="_blank" rel="noopener noreferrer"><span>Ausschreibung öffnen</span>${icon("ext")}</a>` : `<span class="chip t-orange">Kein gültiger Link hinterlegt</span>`}<button class="btn plain" data-act="ptext" data-id="${g.sid}" aria-expanded="${state.ptext.has(g.sid)}">Als Text</button></div>
+      ${state.ptext.has(g.sid) ? `<div class="codebox prose"><pre id="pt-${g.sid}">${esc(projText(p, { fmt: "lang", contact: true }).join("\n"))}</pre><button class="btn bordered xs" data-act="copy" data-target="pt-${g.sid}">Kopieren</button></div>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ---------- views ---------- */
+function noDb() {
+  return `<section class="card empty"><h2 class="title3">Gespeicherte Recherchen nicht erreichbar</h2><p>Hier erscheinen die Ausschreibungen aus den Recherchen deines Recherche-Claudes, je Ausschreibung mit allen passenden Beratern und einer vorbereiteten Mail an den Ansprechpartner. Diese Ansicht kann die Daten nicht laden. Öffne das Radar angemeldet auf claude.ai.</p></section>`;
+}
+function loading() { return `<div class="kpis"><div class="skel sm"></div><div class="skel sm"></div><div class="skel sm"></div><div class="skel sm"></div></div><div class="cards"><div class="skel"></div><div class="skel"></div></div>`; }
+function emptyRuns() {
+  return `<section class="card empty">
+    <span class="tag">Noch leer</span>
+    <h2 class="title2">Noch keine Recherche im Radar</h2>
+    <p>Sobald dein Recherche-Claude Ergebnisse ablegt, erscheint hier jede Ausschreibung einmal, mit allen Beratern, auf die sie passt. Mit E-Mail-Adresse öffnet ein Klick die vorausgefüllte Mail in Outlook, ohne Adresse kopiert er den Angebotstext.</p>
+    <ol class="steps"><li>Ergänze die Anweisung deines Recherche-Claudes um den Baustein aus „Einstellungen → Anbindung“.</li><li>Er schreibt die Ergebnisse direkt hierher, oder du fügst seinen JSON-Block unter „Recherche einfügen“ ein.</li></ol>
+    <button class="btn prominent" data-act="go-conn">Zur Anbindung</button>
+  </section>`;
+}
+function demoBanner() {
+  if (!state.runs.some((r) => r.beispiel)) return "";
+  return `<div class="banner"><span>Die Einträge mit „Beispiel“ sind erfundene Musterdaten zum Ausprobieren. Du löschst sie in den Einstellungen mit einem Klick.</span><button class="btn plain xs" data-act="go-demo">Zu den Einstellungen</button></div>`;
+}
+function viewUebersicht() {
+  if (state.dbState === "missing") return noDb();
+  if (!state.loaded.runs || !state.loaded.projects) return loading();
+  const all = groups().list;
+  if (!all.length) return emptyRuns();
+  const live = all.filter((g) => stOf(g.sid) !== "verworfen");
+  const k = {
+    total: live.length, multi: live.filter((g) => g.berater.length > 1).length,
+    offen: live.filter((g) => OFFEN.includes(stOf(g.sid))).length, ang: live.filter((g) => ANGEBOTEN.includes(stOf(g.sid))).length,
+  };
+  const f = state.filters;
+  const kc = (v, cls, ic, label, n, note) => `<button class="card kcard" data-act="kpi" data-v="${v}"${v !== "pipeline" ? ` aria-pressed="${f.seg === v}"` : ""}><span class="k-head ${cls}">${icon(ic)}${label}</span><span class="metric">${n}</span><span class="note">${note}</span>${icon("chevR", "chev")}</button>`;
+  return `${demoBanner()}<div class="kpis">
+      ${kc("alle", "t-blue", "doc", "Ausschreibungen", k.total, `aus ${state.runs.length} Recherche${state.runs.length === 1 ? "" : "n"}`)}
+      ${kc("mehrere", "t-indigo", "people", "Mehrere Berater", k.multi, "eine Mail für alle Kandidaten")}
+      ${kc("offen", "t-orange", "clock", "Noch offen", k.offen, "neu oder vorgemerkt")}
+      ${kc("pipeline", "t-green", "send", "Angeboten", k.ang, "Profil gesendet und weiter")}
+    </div>
+    ${toolbar()}
+    <div class="list-head"><span class="count-line" id="count"></span></div>
+    <div class="cards" id="cards"></div>`;
+}
+
+function rail(runs) {
+  return `<nav class="rail" aria-label="Recherchen"><ul class="ilist">${runs.map((r) => {
+    const b = r.berater || {}; const n = projectsOf(r.id).length;
+    return `<li><button class="rrow" data-act="run" data-id="${esc(r.id)}" aria-current="${r.id === state.runId}">${avatar(b.name || "?")}<span class="rrow-main"><span class="rrow-t"><span>${esc(b.name || "Ohne Namen")}</span>${r.beispiel ? `<span class="tag">Beispiel</span>` : ""}</span><span class="rrow-s">${esc([b.rolle, `${fmtDate(r.erstelltAm)} · ${n} Projekt${n === 1 ? "" : "e"}`].filter(Boolean).join(" · "))}</span></span>${icon("chevR", "chev")}</button></li>`;
+  }).join("")}</ul></nav>`;
+}
+function profileCard(run) {
+  const b = run.berater || {}; const mods = listOf(b.module);
+  const facts = [
+    ["Seniorität", b.seniority], ["Verfügbar ab", b.verfuegbarAb ? dateOrText(b.verfuegbarAb) : null], ["Auslastung", b.auslastung],
+    ["Remote-Wunsch", b.remote], ["Region", b.region], ["Zeitraum", run.zeitraum],
+    ["Recherche vom", run.erstelltAm ? new Date(run.erstelltAm).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null],
+    ["Plattformen", listOf(run.plattformen).join(", ")],
+  ].filter(([, v]) => v);
+  const confirming = state.confirmDel === run.id;
+  return `<section class="card profile" aria-label="Beraterprofil">
+    <div class="pf-head">${avatar(b.name || "?", "lg")}<div><h2 class="title2">${esc(b.name || "Ohne Namen")} ${run.beispiel ? `<span class="tag">Beispiel</span>` : ""}</h2><p class="pf-role">${esc(b.rolle || "")}</p></div>
+      ${can() ? (confirming
+        ? `<div class="confirm"><span>Recherche mit ${projectsOf(run.id).length} Projekten löschen?</span><button class="btn bordered xs destructive" data-act="del-run" data-id="${esc(run.id)}"${state.busy ? " disabled" : ""}>Endgültig löschen</button><button class="btn plain xs" data-act="del-cancel">Abbrechen</button></div>`
+        : `<button class="btn plain xs destructive" data-act="del-ask" data-id="${esc(run.id)}">Recherche löschen</button>`) : ""}
+    </div>
+    ${mods.length ? `<div class="chips" aria-label="Module">${mods.map((m) => `<span class="chip t-blue">${esc(m)}</span>`).join("")}</div>` : ""}
+    ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+  </section>`;
+}
+function summaryCards(run, items) {
+  const z = run.zusammenfassung || {};
+  const ps = items.map((i) => i.ctx.p);
+  const remoteOk = ps.filter((p) => (remoteOf(p) ?? -1) >= 70).length;
+  const remoteNg = ps.filter((p) => remoteOf(p) === null).length;
+  const s4 = ps.filter((p) => p.s4hana === true).length;
+  const multi = items.filter((i) => i.g.berater.length > 1).length;
+  const resolve = (list) => arr(list).map((x) => {
+    const sx = String(x);
+    const p = ps.find((q) => q.id === sx) || ps.find((q) => String(q.titel || "").trim().toLowerCase() === sx.trim().toLowerCase());
+    return p ? { p, sid: P2S.get(p.id) } : { text: sx };
+  });
+  let top = resolve(z.top3);
+  if (!top.length) top = [...ps].sort((a, b) => (scoreOf(b) ?? -1) - (scoreOf(a) ?? -1)).slice(0, 3).map((p) => ({ p, sid: P2S.get(p.id) }));
+  const chances = resolve(z.hoheErfolgswahrscheinlichkeit);
+  const item = (r) => r.p ? `<li><button class="ref" data-act="jump" data-id="${r.sid}"><span class="score-pill tone-${tone(scoreOf(r.p))}">${fmtScore(scoreOf(r.p))}</span><span>${esc(r.p.titel || "Ohne Titel")}</span></button></li>` : `<li class="note">${esc(r.text)}</li>`;
+  const risks = arr(z.risiken); const alts = arr(run.alternativen);
+  return `<div class="sum">
+    <article class="card scard"><span class="k-head t-blue">${icon("doc")}Gefunden</span><span class="metric-xl">${ps.length}</span><span class="note">${remoteOk} mit ≥ 70 % Remote · ${remoteNg} ohne Remote-Angabe · ${s4} S/4HANA${multi ? ` · ${multi} passen auch zu anderen Beratern` : ""}</span></article>
+    <article class="card scard"><span class="k-head t-green">${icon("star")}Top-3-Matches</span>${top.length ? `<ol class="reflist">${top.slice(0, 3).map(item).join("")}</ol>` : `<p class="note">Keine Treffer.</p>`}</article>
+    <article class="card scard"><span class="k-head t-indigo">${icon("target")}Hohe Erfolgschance</span>${chances.length ? `<ul class="reflist">${chances.map(item).join("")}</ul>` : `<p class="note">Keine Angabe.</p>`}</article>
+    <article class="card scard"><span class="k-head t-orange">${icon("warn")}Risiken</span>${risks.length ? `<ul class="risks">${risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : `<p class="note">Keine genannt.</p>`}</article>
+    ${z.fazit ? `<article class="card scard wide"><span class="k-head">Fazit</span><p>${esc(z.fazit)}</p></article>` : ""}
+    ${alts.length || !ps.length ? `<article class="card scard wide"><span class="k-head">Alternative Suchbegriffe, Module und Rollen</span>${alts.length ? `<div class="chips">${alts.map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</div>` : `<p class="note">Keine Vorschläge hinterlegt.</p>`}</article>` : ""}
+  </div>`;
+}
 function runText(run, list, o) {
   const b = run.berater || {}; const out = [];
-  if (o.head) {
-    out.push(`SAP-Projekte für ${b.name || "Berater"}${b.rolle ? `, ${b.rolle}` : ""}`);
-    out.push([run.erstelltAm ? `Recherche vom ${fmtDate(run.erstelltAm)}` : null, run.zeitraum ? `Zeitraum: ${run.zeitraum}` : null,
-      `${list.length} Projekt${list.length === 1 ? "" : "e"}`].filter(Boolean).join(" · "));
-    const z = run.zusammenfassung || {};
-    if (o.fmt !== "kurz" && z.fazit) out.push(`Fazit: ${z.fazit}`);
-    out.push("");
-  }
+  out.push(`SAP-Projekte für ${b.name || "Berater"}${b.rolle ? `, ${b.rolle}` : ""}`);
+  out.push([run.erstelltAm ? `Recherche vom ${fmtDate(run.erstelltAm)}` : null, run.zeitraum ? `Zeitraum: ${run.zeitraum}` : null, `${list.length} Projekt${list.length === 1 ? "" : "e"}`].filter(Boolean).join(" · "));
+  const z = run.zusammenfassung || {};
+  if (o.fmt !== "kurz" && z.fazit) out.push(`Fazit: ${z.fazit}`);
+  out.push("");
   list.forEach((p, i) => {
     const t = projText(p, o);
     out.push(`${i + 1}. ${t[0]}`, ...t.slice(1).map((l) => "   " + l));
@@ -581,352 +1026,73 @@ function runText(run, list, o) {
   });
   return out.join("\n").trimEnd();
 }
-function renderExport(run, shown) {
+function exportPanel(run, shown) {
   const o = state.exp;
-  const radio = (v, l) => `<input type="radio" name="ex-fmt" id="ex-fmt-${v}" value="${v}" data-export="fmt"${o.fmt === v ? " checked" : ""}><label for="ex-fmt-${v}">${l}</label>`;
-  return `<div class="panel export">
-    <div class="ex-controls">
-      <fieldset class="seg"><legend>Format</legend>${radio("kurz", "Titel + Link")}${radio("lang", "Grobübersicht")}</fieldset>
-      <label class="check"><input type="checkbox" id="ex-head" data-export="head"${o.head ? " checked" : ""}> Kopfzeile mit Berater</label>
-      <label class="check"><input type="checkbox" id="ex-contact" data-export="contact"${o.contact ? " checked" : ""}${o.fmt === "kurz" ? " disabled" : ""}> Ansprechpartner</label>
+  return `<section class="card export" aria-label="Als Text weiterleiten">
+    <div class="actions" style="gap:12px 20px">
+      <div class="seg" role="group" aria-label="Format">${[["kurz", "Titel + Link"], ["lang", "Grobübersicht"]].map(([v, l]) => `<button type="button" id="ex-${v}" data-act="exfmt" data-v="${v}" aria-pressed="${o.fmt === v}">${l}</button>`).join("")}</div>
+      <label class="toggle-row" for="ex-contact"><input class="switch" type="checkbox" id="ex-contact" data-export="contact"${o.contact ? " checked" : ""}${o.fmt === "kurz" ? " disabled" : ""}>Ansprechpartner mitschicken</label>
     </div>
-    <p class="ex-note">${shown.length ? `Enthält die ${shown.length === 1 ? "eine Ausschreibung" : `${shown.length} Ausschreibungen`}, die gerade in der Liste stehen, in derselben Reihenfolge. Was mitkommt, steuerst du über die Filter.` : "Gerade steht kein Projekt in der Liste. Lockere die Filter, dann erscheint hier der Text."}</p>
-    ${shown.length ? `<div class="codebox"><pre id="export-text">${esc(runText(run, shown, o))}</pre><button class="btn primary" data-act="copy" data-target="export-text">Text kopieren</button></div>` : ""}
-  </div>`;
-}
-
-/* ---------- prefilled mail to the contact ---------- */
-const MAIL_APPS = [["mailto", "Standard-Mailprogramm"], ["gmail", "Gmail im Browser"], ["outlook", "Outlook im Browser (Microsoft 365)"]];
-const DEFAULT_MAIL = {
-  betreff: "Ihr Projekt „{titel}“ – passender Berater verfügbar",
-  text: `{anrede},
-
-wir haben Ihre Ausschreibung „{titel}“ gesehen und können Ihnen dafür einen passenden Berater anbieten.
-
-Rolle: {rolle}
-Schwerpunkte: {module}
-Seniorität: {seniority}
-Verfügbar ab: {verfuegbarAb}
-Auslastung: {auslastung}
-Einsatz: {remote}
-
-Gerne sende ich Ihnen das Profil zu und stimme Stundensatz und Starttermin mit Ihnen ab.
-
-Ausschreibung: {link}
-
-Viele Grüße`,
-  angebot: `{anrede},
-
-gerne würden wir Ihnen ein passendes Beraterprofil für diese Position anbieten.
-Die Profile befinden sich im Anhang.
-
-Bei weiteren Fragen stehe ich gerne zur Verfügung.`,
-};
-const PLACEHOLDERS = ["anrede", "ansprechpartner", "titel", "kunde", "plattform", "link", "start", "laufzeit", "rolle", "module", "seniority", "verfuegbarAb", "auslastung", "remote", "region", "berater"];
-const emailOf = (p) => { const s = String((p.ansprechpartner && p.ansprechpartner.email) || "").trim(); return /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]+$/.test(s) ? s : null; };
-const mailTpl = () => ({
-  betreff: (state.mailTpl && typeof state.mailTpl.betreff === "string" && state.mailTpl.betreff.trim()) ? state.mailTpl.betreff : DEFAULT_MAIL.betreff,
-  text: (state.mailTpl && typeof state.mailTpl.text === "string" && state.mailTpl.text.trim()) ? state.mailTpl.text : DEFAULT_MAIL.text,
-  angebot: (state.mailTpl && typeof state.mailTpl.angebot === "string" && state.mailTpl.angebot.trim()) ? state.mailTpl.angebot : DEFAULT_MAIL.angebot,
-});
-// The contact as a person: strips "(Talent Acquisition Manager)"-style suffixes and a "Herr"/"Frau" prefix,
-// and returns null for companies ("SOLCOM GmbH") so they get "Sehr geehrte Damen und Herren".
-function personOf(a) {
-  a = a || {};
-  let name = String(a.name || "").replace(/\s*\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
-  let g = String(a.anrede || "").trim().toLowerCase();
-  const pre = name.match(/^(herrn?|frau)\b\.?\s*/i);
-  if (pre) { if (!g) g = pre[1].toLowerCase(); name = name.slice(pre[0].length).trim(); }
-  if (!name || /&|\b(gmbh|mbh|ag|se|kg|kgaa|ohg|gbr|ug|ltd|inc|llc|plc|bv|co|team|recruiting|personal|hr|jobs|karriere)\b/i.test(name)) return null;
-  const anrede = /^(herrn?|mr)\b/.test(g) ? "Herr" : /^(frau|ms|mrs)\b/.test(g) ? "Frau" : "";
-  return { name, key: name.toLowerCase(), anrede, fromData: !!anrede };
-}
-// Herr/Frau comes from the research data or from the choice made once per contact in the dashboard.
-// It is never guessed from a first name; unknown stays the neutral "Guten Tag Vorname Nachname".
-function salutation(a) {
-  const ps = personOf(a);
-  if (!ps) return "Sehr geehrte Damen und Herren";
-  const g = ps.anrede || state.anreden[ps.key] || "";
-  const toks = ps.name.split(" ");
-  const isTitle = (t) => /^(prof|dr)\b/i.test(t);
-  const titles = toks.filter(isTitle); const rest = toks.filter((t) => !isTitle(t));
-  let i = rest.length - 1;
-  while (i > 0 && /^(von|van|de|der|den|du|zu|zum|zur|di|da|del|ten|ter)$/i.test(rest[i - 1])) i--;
-  const last = [...titles, ...rest.slice(i)].join(" ") || ps.name;
-  if (g === "Herr") return `Sehr geehrter Herr ${last}`;
-  if (g === "Frau") return `Sehr geehrte Frau ${last}`;
-  return `Guten Tag ${ps.name}`;
-}
-function anredeSelect(p) {
-  const ps = personOf(p.ansprechpartner);
-  if (!ps || ps.fromData) return "";
-  const cur = state.anreden[ps.key] || "";
-  const can = state.canWrite && state.db;
-  return `<span class="st" data-st="${cur ? "vorgemerkt" : "neu"}"><select data-anrede-for="${esc(ps.key)}" aria-label="Anrede für ${esc(ps.name)}" title="Gilt für alle Projekte mit ${esc(ps.name)}"${can ? "" : " disabled"}>
-    <option value=""${cur ? "" : " selected"}>Anrede?</option><option value="Herr"${cur === "Herr" ? " selected" : ""}>Herr</option><option value="Frau"${cur === "Frau" ? " selected" : ""}>Frau</option></select></span>`;
-}
-async function saveAnrede(key, value) {
-  const next = { ...state.anreden };
-  if (value) next[key] = value; else delete next[key];
-  state.anreden = next;
-  try { await state.db.doc("meta/anreden").set({ eintraege: Object.entries(next).map(([name, anrede]) => ({ name, anrede })) }); }
-  catch (e) { toast(dbErrorText(e)); }
-}
-function mailVars(p) {
-  const run = runById(p.rechercheId) || {}; const b = run.berater || {}; const a = p.ansprechpartner || {};
-  const d = (v) => v ? (parseDate(v) ? fmtDate(v) : String(v)) : "";
-  return {
-    anrede: salutation(a),
-    ansprechpartner: a.name || "", titel: p.titel || "", kunde: p.kunde || "", plattform: p.plattform || "",
-    link: safeUrl(p.link) || "", start: d(p.start), laufzeit: p.laufzeit || "",
-    rolle: b.rolle || "", module: listOf(b.module).join(", "), seniority: b.seniority || "",
-    verfuegbarAb: d(b.verfuegbarAb), auslastung: b.auslastung || "", remote: b.remote || "", region: b.region || "", berater: b.name || "",
-  };
-}
-// Lines whose placeholders resolve to nothing are dropped, so a missing field never leaves "Seniorität: " behind.
-function fillTpl(tpl, vars, dropLines) {
-  const rep = (s) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k] ?? "") : m));
-  if (!dropLines) return rep(String(tpl)).replace(/\s{2,}/g, " ").trim();
-  return String(tpl).split(/\r?\n/)
-    .filter((line) => [...line.matchAll(/\{(\w+)\}/g)].every((m) => !(m[1] in vars) || String(vars[m[1]] ?? "").trim()))
-    .map(rep).join("\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-function mailFor(p) {
-  const t = mailTpl(); const v = mailVars(p);
-  const to = emailOf(p);
-  return { to, subject: fillTpl(t.betreff, v, false), body: fillTpl(to ? t.text : t.angebot, v, true) };
-}
-function mailHref(m, app) {
-  const e = encodeURIComponent;
-  if (app === "gmail") return `https://mail.google.com/mail/?view=cm&fs=1&to=${e(m.to)}&su=${e(m.subject)}&body=${e(m.body)}`;
-  if (app === "outlook") return `https://outlook.office.com/mail/deeplink/compose?to=${e(m.to)}&subject=${e(m.subject)}&body=${e(m.body)}`;
-  return `mailto:${e(m.to).replace(/%40/g, "@")}?subject=${e(m.subject)}&body=${e(m.body.replace(/\n/g, "\r\n"))}`;
-}
-// With an email address the button opens a prefilled mail; without one it copies the offer text,
-// addressed by name if a contact is named, otherwise "Sehr geehrte Damen und Herren".
-function mailBlock(p, small) {
-  const id = p.id; const m = mailFor(p); const app = state.mailApp;
-  const name = (p.ansprechpartner && p.ansprechpartner.name) || "";
-  const cls = `btn primary${small ? " sm" : ""}`;
-  const shown = state.mailText.has(id);
-  let main;
-  if (m.to) {
-    const appLabel = (MAIL_APPS.find((x) => x[0] === app) || MAIL_APPS[0])[1];
-    main = `<a class="${cls}" href="${esc(mailHref(m, app))}"${app === "mailto" ? "" : ` target="_blank" rel="noopener noreferrer"`} data-act="mail" data-id="${esc(id)}" title="Vorausgefüllte Mail an ${esc(m.to)} öffnen (${esc(appLabel)})">Mail an ${esc(name || m.to)}</a>`;
-  } else {
-    const hint = name ? `Keine E-Mail hinterlegt. Kopiert den Angebotstext an ${name}.` : "Kein Ansprechpartner genannt. Kopiert den Angebotstext mit „Sehr geehrte Damen und Herren“.";
-    main = `<button class="${cls}" data-act="copy-offer" data-id="${esc(id)}" title="${esc(hint)}">Angebotstext kopieren</button>`;
-  }
-  const out = [`<div class="mailrow">${anredeSelect(p)}${main}
-    <button class="linkcopy" data-act="mailtext" data-id="${esc(id)}" aria-expanded="${shown}">${shown ? "Text ausblenden" : "Text anzeigen"}</button>
-  </div>${m.to ? "" : `<div class="muted" style="font-size:.8rem;margin-top:-2px">${name ? `An ${esc(name)}, keine E-Mail hinterlegt` : "Kein Ansprechpartner genannt"}</div>`}`];
-  if (state.mailed.has(id) && ["neu", "vorgemerkt"].includes(stOf(id)) && state.canWrite && state.db) {
-    out.push(`<div class="mailnext"><span>${m.to ? "Mail abgeschickt?" : "Angebot verschickt?"}</span><button class="btn sm" data-act="mark-sent" data-id="${esc(id)}">Auf „Profil gesendet“ setzen</button></div>`);
-  }
-  if (shown) {
-    const f = (k, l, v) => `<div class="mf"><div class="mf-head"><span>${l}</span><button class="linkcopy" data-act="copy" data-target="mt-${k}-${esc(id)}">kopieren</button></div><pre id="mt-${k}-${esc(id)}">${esc(v)}</pre></div>`;
-    out.push(`<div class="mailbox">${m.to ? f("to", "An", m.to) : ""}${f("su", "Betreff", m.subject)}${f("tx", "Text", m.body)}</div>`);
-  }
-  return out.join("");
-}
-function copyOffer(id) {
-  const p = state.projects.find((x) => x.id === id); if (!p) return;
-  const rerender = () => (state.tab === "recherchen" ? renderList() : render());
-  const fallback = () => {
-    state.mailed.add(id); state.mailText.add(id); rerender();
-    const el = document.getElementById("mt-tx-" + id);
-    if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
-    toast("Text ist markiert. Mit Strg+C kopieren.");
-  };
-  try {
-    navigator.clipboard.writeText(mailFor(p).body).then(() => { state.mailed.add(id); rerender(); toast("Angebotstext kopiert"); }, fallback);
-  } catch (e) { fallback(); }
-}
-
-function renderMailCfg() {
-  const d = state.mvDraft || mailTpl();
-  const can = state.canWrite && !!state.db;
-  return `<section class="panel mailcfg" aria-labelledby="mv-h">
-    <h3 id="mv-h">Mailvorlage für Ansprechpartner</h3>
-    <div class="cols">
-      <div class="stack">
-        <div class="field"><label for="mv-app">Mail öffnen mit</label><select id="mv-app">${MAIL_APPS.map(([v, l]) => `<option value="${v}"${state.mailApp === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
-        <p class="hint">Gmail und Outlook öffnen die Mail zuverlässig in einem neuen Tab. Das Standard-Mailprogramm startet aus dem Dashboard heraus nicht in jedem Browser. Bleibt der Klick ohne Wirkung, nimm „Mailtext anzeigen“ und kopiere den Text. Diese Auswahl gilt nur auf diesem Gerät.</p>
-        <div><p class="eyebrow">Platzhalter</p><div class="chips">${PLACEHOLDERS.map((k) => `<span class="ph">{${k}}</span>`).join("")}</div></div>
-        <p class="hint">{anrede} wird zu „Sehr geehrter Herr Müller“ oder „Sehr geehrte Frau Müller“. Nennt die Ausschreibung keine Anrede, wählst du sie einmal pro Ansprechpartner neben dem Button; bis dahin heißt es „Guten Tag Max Müller“. Ohne Namen oder bei einer Firma als Kontakt: „Sehr geehrte Damen und Herren“. Die Beraterangaben kommen aus der jeweiligen Recherche. Zeilen, deren Platzhalter leer bleiben, fallen weg. Den Namen des Beraters nennt die Vorlage bewusst nicht; dafür gibt es {berater}.</p>
-      </div>
-      <div class="stack">
-        <div class="field"><label for="mv-betreff">Betreff</label><input id="mv-betreff" type="text" value="${esc(d.betreff)}"${can ? "" : " disabled"}></div>
-        <div class="field"><label for="mv-text">Mailtext, wenn eine E-Mail-Adresse bekannt ist</label><textarea id="mv-text" spellcheck="true"${can ? "" : " disabled"}>${esc(d.text)}</textarea></div>
-        <p class="hint">Ergänze am Ende deinen Namen und deine Kontaktdaten, falls dein Mailprogramm keine Signatur einfügt.</p>
-        <div class="field"><label for="mv-angebot">Angebotstext, wenn keine E-Mail-Adresse bekannt ist</label><textarea id="mv-angebot" spellcheck="true"${can ? "" : " disabled"}>${esc(d.angebot)}</textarea></div>
-        <p class="hint">Diesen Text kopiert „Angebotstext kopieren“, etwa für das Kontaktformular der Plattform.</p>
-        ${can ? `<div class="actions"><button class="btn primary" data-act="mv-save"${state.mvDraft ? "" : " disabled"}>Vorlage speichern</button><button class="btn ghost" data-act="mv-reset">Standardtext einsetzen</button></div>` : ""}
-      </div>
-    </div>
+    <p class="hint">${shown.length ? `Enthält die ${shown.length === 1 ? "eine Ausschreibung" : `${shown.length} Ausschreibungen`} aus der Liste unten, in derselben Reihenfolge. Was mitkommt, steuerst du über die Filter.` : "Gerade steht kein Projekt in der Liste. Lockere die Filter, dann erscheint hier der Text."}</p>
+    ${shown.length ? `<div class="codebox prose"><pre id="export-text">${esc(runText(run, shown, o))}</pre><button class="btn bordered xs" data-act="copy" data-target="export-text">${icon("copy")}Text kopieren</button></div>` : ""}
   </section>`;
 }
-
-async function saveMailTpl() {
-  if (!state.db || !state.mvDraft) return;
-  const body = { betreff: state.mvDraft.betreff, text: state.mvDraft.text, angebot: state.mvDraft.angebot, geaendertAm: new Date().toISOString() };
-  try { await state.db.doc("meta/mailvorlage").set(body); state.mailTpl = body; state.mvDraft = null; toast("Mailvorlage gespeichert"); }
-  catch (e) { toast(dbErrorText(e)); }
-  render();
-}
-
-function statusSelect(pid) {
-  const st = stOf(pid);
-  return `<span class="st" data-st="${st}"><select aria-label="Bearbeitungsstand" data-status-for="${esc(pid)}"${state.canWrite && state.db ? "" : " disabled"}>${STATUS.map((s) => `<option value="${s.k}"${s.k === st ? " selected" : ""}>${s.l}</option>`).join("")}</select></span>`;
-}
-
-function remoteChip(p) {
-  const r = remoteOf(p);
-  if (r === null) return `<span class="chip warn" title="${esc(p.remoteHinweis || "Remote-Anteil in der Ausschreibung nicht genannt")}">Remote nicht genannt</span>`;
-  const cls = r >= 70 ? "ok" : "bad";
-  return `<span class="chip ${cls} rm" title="${esc(p.remoteHinweis || `Remote ${r} %`)}"><span class="rm-bar" aria-hidden="true"><i style="width:${r}%"></i><b></b></span>${r} % remote</span>`;
-}
-
-function renderProject(p, run) {
-  const s = scoreOf(p); const t = tone(s); const on = s === null ? 0 : Math.round(s);
-  const open = state.open.has(p.id); const st = stOf(p.id);
-  const fit = startFit(p, run);
-  const link = safeUrl(p.link);
-  const land = p.land && String(p.land).toUpperCase() !== "DE" ? String(p.land).toUpperCase() : null;
-  const sub = [p.kunde, p.einsatzort].filter(Boolean).map(esc).join(" · ");
-  const chips = [
-    p.plattform ? `<span class="chip">${esc(p.plattform)}</span>` : "",
-    p.s4hana === true ? `<span class="chip s4">S/4HANA</span>` : "",
-    remoteChip(p),
-    land ? `<span class="chip${land === "CH" ? " warn" : ""}">${esc(land)}</span>` : "",
-    p.start ? `<span class="chip${fit ? (fit.ok ? " ok" : " bad") : ""}" title="${fit ? esc(fit.text) : ""}">Start ${esc(parseDate(p.start) ? fmtDate(p.start) : p.start)}</span>` : "",
-    p.laufzeit ? `<span class="chip">${esc(p.laufzeit)}</span>` : "",
-  ].join("");
-  const head = `<div class="proj-head">
-      <div class="score tone-${t}" aria-label="Matching Score ${fmtScore(s)} von 10">
-        <div class="num">${fmtScore(s)}<small> /10</small></div>
-        <div class="segs" aria-hidden="true">${Array.from({ length: 10 }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("")}</div>
-      </div>
-      <div style="min-width:0">
-        <button class="proj-title" data-act="toggle" data-id="${esc(p.id)}" aria-expanded="${open}" aria-controls="pb-${esc(p.id)}">${esc(p.titel || "Ohne Titel")}</button>
-        ${sub ? `<p class="proj-sub">${sub}</p>` : `<div style="height:8px"></div>`}
-        <div class="chips">${chips}</div>
-      </div>
-      <div class="proj-side">
-        ${statusSelect(p.id)}
-        <span class="pub" title="Veröffentlicht ${esc(fmtDate(p.veroeffentlicht))}">${p.veroeffentlicht ? `veröff. ${esc(relDay(p.veroeffentlicht))}` : "Datum fehlt"}</span>
-      </div>
-    </div>`;
-  if (!open) return `<article class="proj${st === "verworfen" ? " is-out" : ""}" id="p-${esc(p.id)}">${head}</article>`;
-
-  const a = p.ansprechpartner || {};
-  const draft = state.drafts[p.id];
-  const note = draft !== undefined ? draft : ((state.status[p.id] && state.status[p.id].notiz) || "");
-  const kv = [
-    ["Veröffentlicht", p.veroeffentlicht ? `${fmtDate(p.veroeffentlicht)} (${relDay(p.veroeffentlicht)})` : null],
-    ["Start", p.start ? (parseDate(p.start) ? fmtDate(p.start) : p.start) + (fit ? ` · ${fit.text}` : "") : null],
-    ["Laufzeit", p.laufzeit], ["Einsatzort", p.einsatzort],
-    ["Remote", remoteOf(p) === null ? `nicht genannt${p.remoteHinweis ? ` · ${p.remoteHinweis}` : ""}` : `${remoteOf(p)} %${p.remoteHinweis ? ` · ${p.remoteHinweis}` : ""}`],
-    ["Endkunde/Branche", p.kunde], ["Plattform", p.plattform],
-  ].filter(([, v]) => v);
-  return `<article class="proj${st === "verworfen" ? " is-out" : ""}" id="p-${esc(p.id)}">${head}
-    <div class="proj-body" id="pb-${esc(p.id)}">
-      <div>
-        <div class="blk"><p class="eyebrow">Passung zum Berater</p><p>${esc(p.passung || "Keine Bewertung hinterlegt.")}</p></div>
-        <div class="blk"><p class="eyebrow">Anforderungen</p>${arr(p.anforderungen).length ? `<ul class="plain">${arr(p.anforderungen).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="muted">Keine Angaben.</p>`}</div>
-        <div class="blk note"><p class="eyebrow"><label for="note-${esc(p.id)}">Notiz</label></p>
-          <textarea id="note-${esc(p.id)}" data-note-for="${esc(p.id)}" placeholder="z. B. Stundensatz, Rückmeldung vom Vertrieb …"${state.canWrite && state.db ? "" : " disabled"}>${esc(note)}</textarea>
-          <div class="row"><span>${state.status[p.id] && state.status[p.id].geaendertAm ? `Zuletzt geändert ${esc(new Date(state.status[p.id].geaendertAm).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }))}` : ""}</span>${state.canWrite && state.db ? `<button class="btn" data-act="save-note" data-id="${esc(p.id)}"${draft === undefined ? " disabled" : ""}>Notiz speichern</button>` : ""}</div>
-        </div>
-      </div>
-      <div>
-        <div class="blk"><p class="eyebrow">Eckdaten</p><dl class="kv">${kv.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
-        <div class="blk"><p class="eyebrow">Ansprechpartner</p>${a.name || a.email || a.telefon ? `<div class="contact">
-          ${a.name ? `<div class="row"><strong>${esc(a.name)}</strong></div>` : ""}
-          ${a.email ? `<div class="row"><span class="mono" id="em-${esc(p.id)}">${esc(a.email)}</span><button class="linkcopy" data-act="copy" data-target="em-${esc(p.id)}">kopieren</button></div>` : ""}
-          ${a.telefon ? `<div class="row"><span class="mono" id="tel-${esc(p.id)}">${esc(a.telefon)}</span><button class="linkcopy" data-act="copy" data-target="tel-${esc(p.id)}">kopieren</button></div>` : ""}
-        </div>` : `<p class="muted">Nicht angegeben.</p>`}<div style="display:grid;gap:8px;margin-top:6px">${mailBlock(p, false)}</div></div>
-        <div class="blk">
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung öffnen ↗</a>` : `<span class="chip warn">Kein gültiger Link hinterlegt</span>`}<button class="btn" data-act="ptext" data-id="${esc(p.id)}" aria-expanded="${state.ptext.has(p.id)}">Als Text</button></div>
-          ${state.ptext.has(p.id) ? `<div class="codebox ptext"><pre id="pt-${esc(p.id)}">${esc(projText(p, { fmt: "lang", contact: state.exp.contact }).join("\n"))}</pre><button class="btn" data-act="copy" data-target="pt-${esc(p.id)}">Kopieren</button></div>` : ""}
-        </div>
-      </div>
-    </div>
-  </article>`;
-}
-
-function renderList() {
-  const run = runById(state.runId); if (!run) return;
-  const ps = projectsOf(run.id);
-  const shown = applyFilters(ps);
-  const el = document.getElementById("plist");
-  const cnt = document.getElementById("pcount");
-  if (cnt) cnt.textContent = shown.length === ps.length ? `${ps.length} Projekte` : `${shown.length} von ${ps.length} Projekten`;
-  const ex = document.getElementById("export");
-  if (ex) ex.innerHTML = state.exp.open ? renderExport(run, shown) : "";
-  if (!el) return;
-  el.innerHTML = shown.length ? shown.map((p) => renderProject(p, run)).join("")
-    : `<div class="panel empty"><p>${ps.length ? "Kein Projekt passt zu den Filtern." : "Diese Recherche enthält keine Projekte."}</p>${ps.length ? `<button class="btn" data-act="reset-filters">Filter zurücksetzen</button>` : ""}</div>`;
-}
-
-function renderRecherchen() {
-  if (state.dbState === "missing") return noDbPanel();
+function viewBerater() {
+  if (state.dbState === "missing") return noDb();
+  if (!state.loaded.runs || !state.loaded.projects) return loading();
   const runs = runsSorted();
-  if (state.loaded.runs && !runs.length) {
-    return `<div class="panel empty">
-      <p class="eyebrow">Noch leer</p>
-      <h2>Noch keine Recherche im Radar</h2>
-      <p>Sobald dein Recherche-Claude Ergebnisse ablegt, erscheint hier links jede Recherche mit Beraterprofil, Management-Zusammenfassung und den Projekten nach Matching Score.</p>
-      <ol class="steps"><li>Ergänze die Anweisung deines Recherche-Claudes um den Baustein aus „Anbindung“.</li><li>Er schreibt die Ergebnisse direkt hierher, oder du fügst seinen JSON-Block unter „Anbindung“ ein.</li></ol>
-      <button class="btn primary" data-act="tab" data-tab="anbindung">Zur Anbindung</button>
-    </div>`;
-  }
-  if (state.loaded.runs && !runById(state.runId)) state.runId = runs[0] ? runs[0].id : null;
+  if (!runs.length) return emptyRuns();
+  if (!runById(state.runId)) state.runId = runs[0].id;
   const run = runById(state.runId);
-  const ps = run ? projectsOf(run.id) : [];
-  return `<div class="layout">${renderRail()}
-    <div class="main">${run ? `
-      ${renderProfile(run)}
-      ${renderSummary(run, ps)}
-      <section aria-label="Projekte" style="display:grid;gap:12px">
-        <div class="result-line"><h3>Projekte</h3><div class="rl-right"><span class="muted mono" id="pcount"></span><button class="btn" data-act="export-toggle" aria-expanded="${state.exp.open}" aria-controls="export">${state.exp.open ? "Text ausblenden" : "Als Text weiterleiten"}</button></div></div>
-        ${renderFilters(ps)}
-        <div id="export"></div>
-        <div class="plist" id="plist"></div>
-      </section>` : `<div class="skel" style="height:180px"></div><div class="skel" style="height:140px"></div>`}
+  const items = runItems(run);
+  return `${demoBanner()}<div class="split">${rail(runs)}
+    <div class="main">
+      ${profileCard(run)}
+      ${summaryCards(run, items)}
+      <section aria-label="Projekte" style="display:grid;gap:4px;margin-top:8px">
+        <div class="list-head"><h2 class="title3">Projekte</h2><span class="actions"><span class="count-line" id="count"></span><button class="btn bordered xs" data-act="export-toggle" aria-expanded="${state.exp.open}" aria-controls="export">${state.exp.open ? "Text ausblenden" : "Als Text weiterleiten"}</button></span></div>
+        ${toolbar()}
+        <div id="export" style="margin-bottom:12px"></div>
+        <div class="cards" id="cards"></div>
+      </section>
     </div></div>`;
 }
-
-/* ---------- render: pipeline ---------- */
-function renderPipeline() {
-  if (state.dbState === "missing") return noDbPanel();
-  const lanes = PIPE.map((k) => ({ s: STATUS.find((x) => x.k === k), items: state.projects.filter((p) => stOf(p.id) === k).sort(byScore) }));
-  const total = lanes.reduce((n, l) => n + l.items.length, 0);
-  return `<div style="display:grid;gap:16px">
-    <div class="pipe-head">
-      <p class="muted" style="margin:0;max-width:70ch">Alle Projekte über alle Berater hinweg, die du in einer Recherche vorgemerkt oder weiterverfolgt hast. ${total ? "Mit E-Mail-Adresse öffnet „Mail an …“ eine vorausgefüllte Mail. Ohne Adresse kopiert „Angebotstext kopieren“ den kurzen Angebotstext, an den genannten Ansprechpartner oder an „Sehr geehrte Damen und Herren“." :"Setze in einer Recherche den Status eines Projekts, dann landet es hier."}</p>
-      <button class="btn" data-act="mv-toggle" aria-expanded="${state.mvOpen}" aria-controls="mv-h">${state.mvOpen ? "Mailvorlage schließen" : "Mailvorlage bearbeiten"}</button>
-    </div>
-    ${state.mvOpen ? renderMailCfg() : ""}
-    <div class="pipe">${lanes.map((l) => `<section class="lane" aria-label="${esc(l.s.l)}">
-      <div class="lane-head"><h3>${esc(l.s.l)}</h3><span class="count">${l.items.length}</span></div>
-      ${l.items.length ? l.items.map((p) => {
-        const run = runById(p.rechercheId); const s = scoreOf(p); const link = safeUrl(p.link);
-        const note = state.status[p.id] && state.status[p.id].notiz;
-        return `<article class="panel card">
-          <div class="row"><span class="score-pill tone-${tone(s)}">${fmtScore(s)}</span><span class="pub">${p.veroeffentlicht ? esc(relDay(p.veroeffentlicht)) : ""}</span></div>
-          <button class="t" data-act="open-in-run" data-id="${esc(p.id)}">${esc(p.titel || "Ohne Titel")}</button>
-          <div class="meta">${esc((run && run.berater && run.berater.name) || "Recherche gelöscht")}${p.plattform ? ` · ${esc(p.plattform)}` : ""}${remoteOf(p) !== null ? ` · ${remoteOf(p)} % remote` : ""}</div>
-          ${note ? `<div class="meta" style="color:var(--ink)">${esc(note)}</div>` : ""}
-          <div class="row">${statusSelect(p.id)}${link ? `<a class="linkcopy" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ausschreibung ↗</a>` : ""}</div>
-          ${mailBlock(p, true)}
-        </article>`;
-      }).join("") : `<div class="lane-empty">Nichts in diesem Stand.</div>`}
-    </section>`).join("")}</div>
-  </div>`;
+function renderList() {
+  const el = document.getElementById("cards"); if (!el) return;
+  let items; let run = null;
+  if (state.tab === "berater") { run = runById(state.runId); if (!run) return; items = runItems(run); }
+  else items = groups().list.map((g) => ({ g, ctx: null }));
+  const shown = applyFilters(items);
+  const cnt = document.getElementById("count");
+  const noun = state.tab === "berater" ? "Projekte" : "Ausschreibungen";
+  if (cnt) cnt.textContent = shown.length === items.length ? `${items.length} ${noun}` : `${shown.length} von ${items.length} ${noun}`;
+  const ex = document.getElementById("export");
+  if (ex) ex.innerHTML = state.exp.open && run ? exportPanel(run, shown.map((i) => i.ctx.p)) : "";
+  el.innerHTML = shown.length ? shown.map((i) => groupCard(i.g, i.ctx)).join("")
+    : `<section class="card empty"><p>${items.length ? "Keine Ausschreibung passt zu den Filtern." : "Diese Recherche enthält keine Projekte."}</p>${items.length ? `<button class="btn bordered" data-act="reset-filters">Filter zurücksetzen</button>` : ""}</section>`;
 }
 
-/* ---------- render: anbindung ---------- */
+function pipeCard(g) {
+  const st = state.status[g.sid] || {}; const off = arr(st.angeboten);
+  return `<article class="card pcard">
+    <div class="pc-top">${ring(g.best, "sm")}<div style="min-width:0"><button class="pc-title" data-act="open-ov" data-id="${g.sid}">${esc(g.p.titel || "Ohne Titel")}</button><p class="pc-sub">${esc([g.p.kunde, g.p.plattform].filter(Boolean).join(" · "))}</p></div></div>
+    <p class="pc-line">${off.length ? `Angeboten: <strong>${esc(joinNames(off))}</strong>${st.gesendetAm ? ` am ${esc(fmtDate(st.gesendetAm))}` : ""}` : `Passt zu: <strong>${esc(joinNames(g.berater.map((b) => b.name)))}</strong>`}</p>
+    ${st.notiz ? `<p class="pc-line">${esc(st.notiz)}</p>` : ""}
+    <div class="actions">${statusSelect(g.sid)}${mainAction(g, true)}</div>
+    ${nextStep(g)}
+  </article>`;
+}
+function viewPipeline() {
+  if (state.dbState === "missing") return noDb();
+  if (!state.loaded.runs || !state.loaded.projects) return loading();
+  const lanes = PIPE.map((k) => ({ s: STATUS.find((x) => x.k === k), items: groups().list.filter((g) => stOf(g.sid) === k).sort((a, b) => (b.best ?? -1) - (a.best ?? -1)) }));
+  const total = lanes.reduce((n, l) => n + l.items.length, 0);
+  return `<p class="lead">Alle Ausschreibungen, die du vorgemerkt oder angeboten hast, über alle Berater hinweg. ${total ? "Der Button öffnet die Mail an den Ansprechpartner mit allen gewählten Kandidaten oder kopiert den Angebotstext." : "Setze in der Übersicht den Status einer Ausschreibung, dann landet sie hier."}</p>
+    <div class="lanes">${lanes.map((l) => `<section class="lane" aria-label="${esc(l.s.l)}"><div class="lane-h"><h2 class="title3">${esc(l.s.l)}</h2><span class="cnt">${l.items.length}</span></div>
+      ${l.items.length ? l.items.map(pipeCard).join("") : `<div class="lane-empty">Nichts in diesem Stand.</div>`}</section>`).join("")}</div>`;
+}
+
+/* ---------- settings & connection ---------- */
 const URL_PH = "<URL dieses Artefakts>";
 function promptDirect(url) {
   return `## Ablage im Dashboard „SAP Projektradar“
@@ -943,10 +1109,12 @@ mit dem Tool ArtifactData (action "batch", ein Aufruf mit allen Dokumenten).
 2. Je Projekt ein Dokument in Collection "projekte", doc_id "<recherche-doc_id>__01", "__02" … nach Score absteigend. Felder:
    rechercheId, titel, kunde, einsatzort, land (DE/AT/CH …), remoteAnteil (Zahl 0–100, null wenn nicht genannt),
    remoteHinweis, veroeffentlicht (JJJJ-MM-TT), laufzeit, start (JJJJ-MM-TT oder "ASAP"), passung, anforderungen[],
-   ansprechpartner {anrede ("Herr"/"Frau", nur wenn genannt), name, email, telefon}, link, plattform, s4hana (true/false),
-   score (0–10, eine Nachkommastelle).
+   ansprechpartner {anrede ("Herr"/"Frau", nur wenn genannt), name, email, telefon}, link, plattform,
+   referenz (Projektnummer der Plattform, falls vorhanden), s4hana (true/false), score (0–10, eine Nachkommastelle).
 3. Die Collection "status" nie anfassen. Dort pflegt der Ressourcenmanager den Bearbeitungsstand.
 
+Den Link immer vollständig und unverändert aus der Ausschreibung übernehmen: Passt dieselbe Ausschreibung
+auf mehrere Berater, fasst das Dashboard sie über den Link zu einer Ausschreibung mit einer gemeinsamen Mail zusammen.
 Mehr als 49 Projekte auf mehrere batch-Aufrufe verteilen. Fehlende Angaben weglassen statt zu raten.
 Die Textantwort mit Management-Zusammenfassung und Projektübersicht bleibt wie gehabt.`;
 }
@@ -963,7 +1131,7 @@ const EXAMPLE_JSON = `{
       "region": "DACH, kein CH"
     },
     "zeitraum": "letzte 3 Tage",
-    "erstelltAm": "2026-10-13T09:30:00+02:00",
+    "erstelltAm": "2026-10-14T09:30:00+02:00",
     "plattformen": ["Freelancermap", "Hays", "Westhouse", "K2 Partnering", "Krongaard"],
     "zusammenfassung": {
       "fazit": "Ein bis zwei Sätze zur Lage.",
@@ -982,7 +1150,7 @@ const EXAMPLE_JSON = `{
       "land": "DE",
       "remoteAnteil": 80,
       "remoteHinweis": "…",
-      "veroeffentlicht": "2026-10-12",
+      "veroeffentlicht": "2026-10-13",
       "laufzeit": "…",
       "start": "2026-11-01",
       "passung": "…",
@@ -990,6 +1158,7 @@ const EXAMPLE_JSON = `{
       "ansprechpartner": { "anrede": "Herr", "name": "…", "email": "…", "telefon": "…" },
       "link": "https://…",
       "plattform": "Freelancermap",
+      "referenz": "…",
       "s4hana": true,
       "score": 8.5
     }
@@ -1000,64 +1169,94 @@ function promptPaste() {
 Gib am Ende jeder Antwort zusätzlich einen JSON-Codeblock in genau diesem Aufbau aus.
 Regeln: fehlende Angaben weglassen statt zu raten · remoteAnteil als Zahl 0–100 oder null (nicht genannt)
 · Datumswerte als JJJJ-MM-TT · score 0–10 mit einer Nachkommastelle · Projekte nach Score absteigend
-· top3 und hoheErfolgswahrscheinlichkeit verweisen über "nr" auf die Projekte.
+· top3 und hoheErfolgswahrscheinlichkeit verweisen über "nr" auf die Projekte
+· link vollständig und unverändert aus der Ausschreibung übernehmen (darüber bündelt das Dashboard
+  dieselbe Ausschreibung für mehrere Berater).
 
 \`\`\`json
 ${EXAMPLE_JSON}
 \`\`\``;
 }
-
-function renderAnbindung() {
+function viewSettings() {
+  const c = can();
+  const a = state.absDraft || absStored();
+  const t = state.mvDraft || mailTpl();
   const url = state.meta.url || URL_PH;
+  const sample = state.loaded.projects ? [...groups().list].sort((x, y) => y.berater.length - x.berater.length || (y.best ?? -1) - (x.best ?? -1))[0] : null;
+  const prev = sample ? mailFor(sample, t) : null;
+  const hasDemo = state.runs.some((r) => r.beispiel);
+  const frow = (k, label, ph, type) => `<li><label class="frow" for="abs-${k}"><span>${label}</span><input id="abs-${k}" type="${type || "text"}" data-abs="${k}" value="${esc(a[k] || "")}" placeholder="${esc(ph)}"${c ? "" : " disabled"}></label></li>`;
   const schema = [
-    ["berater.name / rolle", "Wer gesucht wird. Pflicht ist nur der Name."],
-    ["berater.module[]", "SAP-Module als Kürzel, z. B. FI, CO, SD, EWM."],
-    ["berater.verfuegbarAb", "JJJJ-MM-TT. Daran prüft das Radar, ob der Projektstart passt."],
+    ["berater.name / rolle", "Wer gesucht wird. Pflicht ist nur der Name. Der Name steht in der Mail an den Ansprechpartner."],
+    ["berater.module[] / seniority", "Erscheinen in der Kandidatenzeile der Mail."],
+    ["berater.verfuegbarAb", "JJJJ-MM-TT oder „sofort“. Daran prüft das Radar, ob der Projektstart passt."],
     ["zusammenfassung", "fazit, top3[], hoheErfolgswahrscheinlichkeit[], risiken[]"],
     ["alternativen[]", "Suchbegriffe, Nachbarmodule, Nachbarrollen"],
+    ["projekte[].link", "Vollständige https-Adresse. Gleicher Link in mehreren Recherchen = eine Ausschreibung für mehrere Berater."],
     ["projekte[].score", "0–10. Bestimmt Reihenfolge und Farbe."],
     ["projekte[].remoteAnteil", "Zahl 0–100 oder null. Null erscheint als „Remote nicht genannt“."],
-    ["projekte[].veroeffentlicht", "JJJJ-MM-TT"],
+    ["projekte[].veroeffentlicht", "JJJJ-MM-TT. Grundlage für den Zeitraum-Filter."],
     ["projekte[].start", "JJJJ-MM-TT oder „ASAP“"],
-    ["projekte[].s4hana", "true, wenn S/4HANA-Projekt"],
-    ["projekte[].link", "Vollständige https-Adresse der Ausschreibung"],
-    ["projekte[].ansprechpartner", "anrede (Herr/Frau, nur wenn genannt), name, email, telefon. Mit E-Mail gibt es eine vorausgefüllte Mail, sonst den Angebotstext zum Kopieren."],
+    ["projekte[].ansprechpartner", "anrede (Herr/Frau, nur wenn genannt), name, email, telefon. Mit E-Mail gibt es die vorausgefüllte Mail, sonst den Angebotstext zum Kopieren."],
+    ["projekte[].referenz", "Projektnummer der Plattform. Bündelt, falls kein Link vorhanden ist."],
   ];
-  return `<div class="conn">
-    <p class="muted" style="margin:0;max-width:72ch">Der Recherche-Claude legt seine Ergebnisse auf einem von zwei Wegen ab. Den Bearbeitungsstand und deine Notizen speichert das Radar getrennt davon, eine neue Recherche überschreibt sie also nicht.</p>
-    <div class="conn-grid">
-      <section class="panel">
-        <p class="eyebrow">Weg A · automatisch</p>
-        <h2>Claude schreibt direkt ins Radar</h2>
-        <p>Für Claude Code und Cowork, also überall dort, wo Claude die Artifact-Tools hat. Füge diesen Baustein an seine Anweisung an:</p>
-        <div class="urlrow"><span class="muted">Adresse:</span><code id="art-url">${esc(url)}</code><button class="linkcopy" data-act="copy" data-target="art-url">kopieren</button></div>
-        <div class="codebox"><pre id="prompt-a">${esc(promptDirect(url))}</pre><button class="btn" data-act="copy" data-target="prompt-a">Kopieren</button></div>
-      </section>
-      <section class="panel">
-        <p class="eyebrow">Weg B · Copy &amp; Paste</p>
-        <h2>JSON-Block hier einfügen</h2>
-        <p>Für den normalen Claude-Chat. Der Baustein sorgt dafür, dass Claude am Ende einen JSON-Block ausgibt:</p>
-        <div class="codebox"><pre id="prompt-b">${esc(promptPaste())}</pre><button class="btn" data-act="copy" data-target="prompt-b">Kopieren</button></div>
-      </section>
-    </div>
-    <section class="panel" aria-labelledby="imp-h">
-      <p class="eyebrow">Import</p>
-      <h2 id="imp-h">Recherche einfügen</h2>
-      <p>Füge den JSON-Block aus der Antwort ein, gern mitsamt den \`\`\`json-Zeilen. Jeder Import legt eine neue Recherche an.</p>
-      <textarea id="import-json" spellcheck="false" placeholder='{ "recherche": { "berater": { "name": "…" } }, "projekte": [ … ] }'${state.canWrite && state.db ? "" : " disabled"}>${esc(state.importText)}</textarea>
-      ${state.importMsg ? `<div class="msg ${state.importMsg.kind}" role="status">${esc(state.importMsg.text)}</div>` : ""}
-      <div><button class="btn primary" data-act="import"${!state.db || !state.canWrite || state.busy ? " disabled" : ""}>${state.busy ? "Importiere …" : "Importieren"}</button>${!state.db ? ` <span class="muted">Speichern ist in dieser Ansicht nicht verfügbar.</span>` : (!state.canWrite ? ` <span class="muted">Du hast hier nur Leserechte.</span>` : "")}</div>
+  return `<div class="settings">
+    <section class="set-sec" aria-labelledby="h-abs">
+      <div class="head"><h2 class="title3" id="h-abs">Absender</h2><p class="hint">Steht unter jeder Nachricht als {absender}, damit dich der Ansprechpartner bei Rückfragen erreicht.</p></div>
+      <ul class="ilist form">${frow("name", "Name", state.meName || "Vorname Nachname")}${frow("firma", "Firma", "Firmenname")}${frow("telefon", "Telefon", "+49 …", "tel")}${frow("email", "E-Mail", "name@firma.de", "email")}</ul>
+      ${c ? `<div class="actions"><button class="btn bordered" data-act="abs-save"${state.absDraft ? "" : " disabled"}>Absender speichern</button></div>` : ""}
     </section>
-    <section class="panel">
-      <p class="eyebrow">Datenfelder</p>
-      <h2>Was das Radar auswertet</h2>
+
+    <section class="set-sec" aria-labelledby="h-app">
+      <div class="head"><h2 class="title3" id="h-app">Mail öffnen mit</h2></div>
+      <div><div class="seg" role="group" aria-label="Mail öffnen mit">${MAIL_APPS.map(([v, l]) => `<button type="button" id="app-set-${v}" data-act="mailapp" data-v="${v}" aria-pressed="${state.mailApp === v}">${l}</button>`).join("")}</div></div>
+      <p class="hint">„Outlook im Browser“ öffnet die fertige Mail in einem neuen Tab von Outlook im Web (Microsoft 365) und klappt zuverlässig. „Outlook-App“ nutzt mailto: und startet das Standard-Mailprogramm, was aus dem Dashboard heraus nicht in jedem Browser funktioniert. Dann hilft „Kandidaten & Text“ zum Kopieren. Diese Auswahl gilt nur auf diesem Gerät.</p>
+    </section>
+
+    <section class="set-sec" aria-labelledby="h-tpl">
+      <div class="head"><h2 class="title3" id="h-tpl">Mailvorlagen</h2><p class="hint">{anrede} wird zu „Sehr geehrter Herr Müller“ oder „Sehr geehrte Frau Müller“. Nennt die Ausschreibung keine Anrede, wählst du sie einmal pro Ansprechpartner neben dem Mail-Button. Bis dahin heißt es „Guten Tag Max Müller“, ohne Namen oder bei einer Firma „Sehr geehrte Damen und Herren“. {kandidatenliste} listet alle gewählten Berater mit Rolle und Verfügbarkeit, {profile} wird zu „ein passendes Profil“ oder „zwei passende Profile“. Zeilen, deren Platzhalter leer bleiben, fallen weg.</p></div>
+      <div class="chips">${PLACEHOLDERS.map((k) => `<span class="ph">{${k}}</span>`).join("")}</div>
+      <div class="set-grid">
+        <div class="stack">
+          <div class="field"><label for="mv-betreff">Betreff</label><input id="mv-betreff" type="text" value="${esc(t.betreff)}"${c ? "" : " disabled"}></div>
+          <div class="field"><label for="mv-text">Mailtext, wenn eine E-Mail-Adresse bekannt ist</label><textarea id="mv-text" spellcheck="true"${c ? "" : " disabled"}>${esc(t.text)}</textarea></div>
+          <div class="field"><label for="mv-angebot">Angebotstext ohne E-Mail-Adresse</label><textarea id="mv-angebot" class="short" spellcheck="true"${c ? "" : " disabled"}>${esc(t.angebot)}</textarea></div>
+          ${c ? `<div class="actions"><button class="btn bordered" data-act="mv-save"${state.mvDraft ? "" : " disabled"}>Vorlage speichern</button><button class="btn plain" data-act="mv-reset">Standardtext einsetzen</button></div>` : ""}
+        </div>
+        <div class="stack" style="align-content:start">
+          <p class="sec-hdr">Vorschau${sample ? ` mit „${esc(sample.p.titel || "")}“` : ""}</p>
+          ${prev ? `<div class="card stack"><p class="note">${prev.to ? `An ${esc(prev.to)}` : "Ohne E-Mail-Adresse: Angebotstext"}</p>${prev.to ? `<p class="who-n">${esc(prev.subject)}</p>` : ""}<div class="codebox prose"><pre id="mv-preview" style="padding-right:14px">${esc(prev.body)}</pre></div></div>` : `<p class="hint">Sobald Ausschreibungen da sind, siehst du hier, wie die Mail aussieht.</p>`}
+        </div>
+      </div>
+    </section>
+
+    <section class="set-sec" aria-labelledby="h-conn">
+      <div class="head"><h2 class="title3" id="h-conn">Anbindung des Recherche-Claudes</h2><p class="hint">Der Recherche-Claude legt seine Ergebnisse auf einem von zwei Wegen ab. Bearbeitungsstand, Notizen und Anreden speichert das Radar getrennt davon, eine neue Recherche überschreibt sie also nicht.</p></div>
+      <div class="set-grid">
+        <div class="card stack"><span class="k-head t-blue">Weg A · automatisch</span><p class="hint">Für Claude Code und Cowork, also überall dort, wo Claude die Artifact-Tools hat. Hänge diesen Baustein an seine Anweisung an.</p>
+          <div class="codebox"><pre id="prompt-a">${esc(promptDirect(url))}</pre><button class="btn bordered xs" data-act="copy" data-target="prompt-a">${icon("copy")}Kopieren</button></div></div>
+        <div class="card stack"><span class="k-head t-indigo">Weg B · Copy &amp; Paste</span><p class="hint">Für den normalen Claude-Chat. Claude gibt am Ende einen JSON-Block aus, den du unten einfügst.</p>
+          <div class="codebox"><pre id="prompt-b">${esc(promptPaste())}</pre><button class="btn bordered xs" data-act="copy" data-target="prompt-b">${icon("copy")}Kopieren</button></div></div>
+      </div>
+    </section>
+
+    <section class="set-sec" aria-labelledby="h-imp" id="import">
+      <div class="head"><h2 class="title3" id="h-imp">Recherche einfügen</h2><p class="hint">Füge den JSON-Block aus der Antwort ein, gern mitsamt den \`\`\`json-Zeilen. Jeder Import legt eine neue Recherche an.</p></div>
+      <textarea id="import-json" spellcheck="false" aria-label="JSON-Block der Recherche" placeholder='{ "recherche": { "berater": { "name": "…" } }, "projekte": [ … ] }'${c ? "" : " disabled"}>${esc(state.importText)}</textarea>
+      ${state.importMsg ? `<div class="msg ${state.importMsg.kind}" role="status">${esc(state.importMsg.text)}</div>` : ""}
+      <div class="actions"><button class="btn prominent" data-act="import"${!c || state.busy ? " disabled" : ""}>${state.busy ? "Importiere …" : "Importieren"}</button>${!state.db ? `<span class="hint">Speichern ist in dieser Ansicht nicht verfügbar.</span>` : (!state.canWrite ? `<span class="hint">Du hast hier nur Leserechte.</span>` : "")}</div>
+    </section>
+
+    ${hasDemo ? `<section class="set-sec" aria-labelledby="h-demo" id="demo">
+      <div class="head"><h2 class="title3" id="h-demo">Beispieldaten</h2><p class="hint">Die Recherchen mit „Beispiel“ sind erfunden und zeigen, wie das Radar mit echten Ergebnissen aussieht. Löschen entfernt sie samt Status und Notizen. Echte Recherchen bleiben unberührt.</p></div>
+      ${c ? `<div class="actions">${state.confirmDemo ? `<span class="confirm">Alle Beispieldaten löschen?</span><button class="btn bordered destructive" data-act="demo-del"${state.busy ? " disabled" : ""}>Endgültig löschen</button><button class="btn plain" data-act="demo-cancel">Abbrechen</button>` : `<button class="btn bordered destructive" data-act="demo-ask">Beispieldaten löschen</button>`}</div>` : ""}
+    </section>` : ""}
+
+    <section class="set-sec" aria-labelledby="h-fields">
+      <div class="head"><h2 class="title3" id="h-fields">Was das Radar auswertet</h2></div>
       <div class="tablewrap"><table class="schema"><thead><tr><th>Feld</th><th>Bedeutung</th></tr></thead><tbody>${schema.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</tbody></table></div>
     </section>
   </div>`;
-}
-
-function noDbPanel() {
-  return `<div class="panel empty"><h2>Daten nicht verfügbar</h2><p>Diese Ansicht kann die gespeicherten Recherchen nicht laden. Öffne das Radar angemeldet auf claude.ai.</p></div>`;
 }
 
 /* ---------- render root ---------- */
@@ -1065,75 +1264,92 @@ function render() {
   const a = document.activeElement; const fid = a && a.id;
   let s0 = null, s1 = null;
   if (fid && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) { try { s0 = a.selectionStart; s1 = a.selectionEnd; } catch (e) {} }
-  renderTabs();
+  renderNav(); renderTabbar();
   const v = document.getElementById("view");
-  v.setAttribute("role", "tabpanel"); v.setAttribute("aria-labelledby", "tab-" + state.tab);
-  v.innerHTML = state.tab === "pipeline" ? renderPipeline() : state.tab === "anbindung" ? renderAnbindung() : renderRecherchen();
-  if (state.tab === "recherchen") renderList();
+  v.innerHTML = state.tab === "pipeline" ? viewPipeline() : state.tab === "einstellungen" ? viewSettings() : state.tab === "berater" ? viewBerater() : viewUebersicht();
+  renderList();
   if (fid) {
     const n = document.getElementById(fid);
     if (n && n !== a) { n.focus({ preventScroll: true }); if (s0 !== null) { try { n.setSelectionRange(s0, s1); } catch (e) {} } }
   }
 }
+const scrollToId = (id, block) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: block || "start" }); };
 
 /* ---------- actions ---------- */
 const writeChains = {};
-function saveStatus(pid, patch) {
-  const cur = state.status[pid] || {};
+function saveStatus(sid, patch) {
+  const cur = state.status[sid] || {};
   const body = { ...cur, status: cur.status || "neu", notiz: cur.notiz || "", ...patch, geaendertAm: new Date().toISOString() };
-  state.status[pid] = body;
-  writeChains[pid] = (writeChains[pid] || Promise.resolve())
-    .then(() => state.db.doc("status/" + pid).set(body))
+  state.status[sid] = body;
+  writeChains[sid] = (writeChains[sid] || Promise.resolve())
+    .then(() => state.db.doc("status/" + sid).set(body))
     .catch((e) => { toast(dbErrorText(e)); if (e && e.code === "invalid_argument") { state.canWrite = false; render(); } });
-  return writeChains[pid];
+  return writeChains[sid];
 }
-
-function jumpTo(pid) {
-  const p = state.projects.find((x) => x.id === pid); if (!p) return;
-  state.tab = "recherchen"; state.runId = p.rechercheId; state.open.add(pid);
-  if (!applyFilters(projectsOf(p.rechercheId)).some((x) => x.id === pid)) {
-    Object.assign(state.filters, { q: "", min: "0", remote: "alle", plattform: "alle", status: "alle" });
-  }
-  persist(); render();
-  const el = document.getElementById("p-" + pid);
-  if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+function markSent(sid) {
+  const g = groups().map.get(sid); if (!g || !can()) return;
+  const names = selOf(g).map((b) => b.name);
+  const cur = state.status[sid] || {};
+  const st = OFFEN.includes(stOf(sid)) ? "gesendet" : stOf(sid);
+  saveStatus(sid, { status: st, angeboten: [...new Set([...arr(cur.angeboten), ...names])], gesendetAm: new Date().toISOString() });
+  state.mailed.delete(sid);
+  toast(`Profil gesendet: ${joinNames(names)}`);
+  render();
 }
-
+function revealText(sid) {
+  state.comp.add(sid); state.mailed.add(sid); render();
+  const el = document.getElementById("mt-tx-" + sid);
+  if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  toast("Text ist markiert. Mit Strg+C kopieren.");
+}
+function copyOffer(sid) {
+  const g = groups().map.get(sid); if (!g) return;
+  const m = mailFor(g); if (!m.n) return;
+  try {
+    navigator.clipboard.writeText(m.body).then(() => { state.mailed.add(sid); render(); toast("Angebotstext kopiert"); }, () => revealText(sid));
+  } catch (e) { revealText(sid); }
+}
 async function copyFrom(btn) {
   const el = document.getElementById(btn.dataset.target); if (!el) return;
-  const text = el.textContent;
-  const label = btn.textContent;
-  try {
-    await navigator.clipboard.writeText(text);
-    btn.textContent = "Kopiert";
-  } catch (e) {
+  const text = el.textContent; const html = btn.innerHTML;
+  try { await navigator.clipboard.writeText(text); btn.textContent = "Kopiert"; }
+  catch (e) {
     const r = document.createRange(); r.selectNodeContents(el);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
     btn.textContent = "Markiert, jetzt Strg+C";
   }
-  setTimeout(() => { btn.textContent = label; }, 1800);
+  setTimeout(() => { btn.innerHTML = html; }, 1800);
 }
-
-async function deleteRun(id) {
+function openInOverview(sid, part) {
+  state.tab = "uebersicht"; state.open.add(sid); if (part === "comp") state.comp.add(sid);
+  const g = groups().map.get(sid);
+  if (g && !applyFilters([{ g, ctx: null }]).length) Object.assign(state.filters, { q: "", seg: "alle", zeit: "alle", min: "0", remote: "alle", status: "alle" });
+  persist(); render(); scrollToId("g-" + sid);
+}
+function gotoRun(runId) {
+  if (!runById(runId)) return;
+  state.tab = "berater"; state.runId = runId; state.confirmDel = null; persist(); render(); window.scrollTo({ top: 0 });
+}
+async function deleteRuns(ids, label) {
   if (!state.db || state.busy) return;
+  const idset = new Set(ids);
+  const affected = new Set(state.projects.filter((p) => idset.has(p.rechercheId)).map((p) => P2S.get(p.id)).filter(Boolean));
+  const orphaned = [...affected].filter((sid) => { const g = groups().map.get(sid); return !g || g.items.every((it) => idset.has(it.run.id)); });
   state.busy = true; render();
   try {
-    for (const p of projectsOf(id)) {
-      await state.db.doc("projekte/" + p.id).delete();
-      if (state.status[p.id]) await state.db.doc("status/" + p.id).delete();
-    }
-    await state.db.doc("recherchen/" + id).delete();
-    state.confirmDel = null; state.runId = null;
-    toast("Recherche gelöscht");
+    for (const p of state.projects.filter((x) => idset.has(x.rechercheId))) await state.db.doc("projekte/" + p.id).delete();
+    for (const sid of orphaned) if (state.status[sid]) await state.db.doc("status/" + sid).delete();
+    for (const id of ids) await state.db.doc("recherchen/" + id).delete();
+    state.confirmDel = null; state.confirmDemo = false;
+    if (idset.has(state.runId)) state.runId = null;
+    toast(label);
   } catch (e) { toast(dbErrorText(e)); }
   state.busy = false; persist(); render();
 }
-
 function localStamp(d) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
 }
-
 async function doImport() {
   if (!state.db || state.busy) return;
   const fail = (text) => { state.importMsg = { kind: "err", text }; render(); };
@@ -1146,106 +1362,128 @@ async function doImport() {
   const projs = arr(obj.projekte || (rec && rec.projekte)).filter((p) => p && typeof p === "object");
   if (!rec || !rec.berater || !rec.berater.name) return fail('Es fehlt "recherche.berater.name".');
   rec = { ...rec }; delete rec.projekte;
-
   const created = rec.erstelltAm && !isNaN(Date.parse(rec.erstelltAm)) ? new Date(rec.erstelltAm) : new Date();
   const runId = cleanId(rec.id) || `${localStamp(new Date())}_${slug(rec.berater.name)}`;
   const ids = projs.map((p, i) => cleanId(p.id) || `${runId}__${String(i + 1).padStart(2, "0")}`);
   const byNr = new Map(projs.map((p, i) => [String(p.nr ?? i + 1), ids[i]]));
   const byTitle = new Map(projs.map((p, i) => [String(p.titel || "").trim().toLowerCase(), ids[i]]));
-  const ref = (x) => {
-    const s = String(x).trim();
-    if (/^\d+$/.test(s)) return byNr.get(s) ?? s;
-    return byTitle.get(s.toLowerCase()) ?? (ids.includes(s) ? s : s);
-  };
+  const ref = (x) => { const s = String(x).trim(); if (/^\d+$/.test(s)) return byNr.get(s) ?? s; return byTitle.get(s.toLowerCase()) ?? s; };
   const z = rec.zusammenfassung || {};
-  const runBody = clone({
-    ...rec, id: undefined, erstelltAm: created.toISOString(),
-    zusammenfassung: { ...z, top3: arr(z.top3).map(ref), hoheErfolgswahrscheinlichkeit: arr(z.hoheErfolgswahrscheinlichkeit).map(ref) },
-  });
-
+  const runBody = clone({ ...rec, id: undefined, erstelltAm: created.toISOString(), zusammenfassung: { ...z, top3: arr(z.top3).map(ref), hoheErfolgswahrscheinlichkeit: arr(z.hoheErfolgswahrscheinlichkeit).map(ref) } });
   state.busy = true; state.importMsg = null; render();
   try {
-    for (let i = 0; i < projs.length; i++) {
-      const p = clone({ ...projs[i], id: undefined, nr: undefined, rechercheId: runId });
-      await state.db.doc("projekte/" + ids[i]).set(p);
-    }
+    for (let i = 0; i < projs.length; i++) await state.db.doc("projekte/" + ids[i]).set(clone({ ...projs[i], id: undefined, nr: undefined, rechercheId: runId }));
     await state.db.doc("recherchen/" + runId).set(runBody);
     state.importText = "";
     state.importMsg = { kind: "ok", text: `Importiert: ${rec.berater.name}, ${projs.length} Projekte.` };
-    state.runId = runId; state.tab = "recherchen"; persist();
+    state.runId = runId; persist();
     toast(`Recherche für ${rec.berater.name} importiert`);
-  } catch (e) {
-    state.importMsg = { kind: "err", text: dbErrorText(e) };
-  }
+  } catch (e) { state.importMsg = { kind: "err", text: dbErrorText(e) }; }
   state.busy = false; render();
+}
+async function saveMailTpl() {
+  if (!state.db || !state.mvDraft) return;
+  const body = { betreff: state.mvDraft.betreff, text: state.mvDraft.text, angebot: state.mvDraft.angebot, geaendertAm: new Date().toISOString() };
+  try { await state.db.doc("meta/mailvorlage").set(body); state.mailTpl = body; state.mvDraft = null; toast("Mailvorlage gespeichert"); }
+  catch (e) { toast(dbErrorText(e)); }
+  render();
+}
+async function saveAbsender() {
+  if (!state.db || !state.absDraft) return;
+  const d = state.absDraft;
+  const body = { name: String(d.name || "").trim(), firma: String(d.firma || "").trim(), telefon: String(d.telefon || "").trim(), email: String(d.email || "").trim(), geaendertAm: new Date().toISOString() };
+  try { await state.db.doc("meta/absender").set(body); state.absender = body; state.absDraft = null; toast("Absender gespeichert"); }
+  catch (e) { toast(dbErrorText(e)); }
+  render();
 }
 
 document.addEventListener("click", (e) => {
-  const b = e.target.closest("[data-act]"); if (!b) return;
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
   const act = b.dataset.act, id = b.dataset.id;
   if (act === "tab") { state.tab = b.dataset.tab; persist(); render(); window.scrollTo({ top: 0 }); }
+  else if (act === "kpi") {
+    if (b.dataset.v === "pipeline") { state.tab = "pipeline"; persist(); render(); window.scrollTo({ top: 0 }); }
+    else { state.filters.seg = b.dataset.v; if (b.dataset.v !== "alle") state.filters.status = "aktiv"; persist(); render(); }
+  }
+  else if (act === "seg") { state.filters.seg = b.dataset.v; persist(); render(); }
   else if (act === "run") { state.runId = id; state.confirmDel = null; persist(); render(); }
-  else if (act === "toggle") { state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderList(); }
-  else if (act === "export-toggle") { state.exp.open = !state.exp.open; persist(); render(); }
-  else if (act === "ptext") { state.ptext.has(id) ? state.ptext.delete(id) : state.ptext.add(id); renderList(); }
+  else if (act === "toggle") { state.open.has(id) ? state.open.delete(id) : state.open.add(id); render(); }
+  else if (act === "comp") { state.comp.has(id) ? state.comp.delete(id) : state.comp.add(id); render(); }
   else if (act === "mail") {
     // Let the link open first; re-rendering now would detach it before the browser follows it.
-    state.mailed.add(id);
-    setTimeout(() => (state.tab === "recherchen" ? renderList() : render()), 0);
+    state.mailed.add(id); setTimeout(render, 0);
   }
-  else if (act === "mailtext") { state.mailText.has(id) ? state.mailText.delete(id) : state.mailText.add(id); state.tab === "recherchen" ? renderList() : render(); }
   else if (act === "copy-offer") copyOffer(id);
-  else if (act === "mark-sent") { saveStatus(id, { status: "gesendet" }); state.mailed.delete(id); toast("Status: Profil gesendet"); render(); }
-  else if (act === "mv-toggle") { state.mvOpen = !state.mvOpen; render(); }
-  else if (act === "mv-save") saveMailTpl();
-  else if (act === "mv-reset") { state.mvDraft = { ...DEFAULT_MAIL }; render(); }
-  else if (act === "jump" || act === "open-in-run") jumpTo(id);
+  else if (act === "mark-sent") markSent(id);
+  else if (act === "mailapp") { state.mailApp = b.dataset.v; persist(); render(); }
   else if (act === "copy") copyFrom(b);
+  else if (act === "jump") { state.open.add(id); render(); scrollToId("g-" + id); }
+  else if (act === "open-ov") openInOverview(id, "comp");
+  else if (act === "goto-run") gotoRun(b.dataset.run);
+  else if (act === "ptext") { state.ptext.has(id) ? state.ptext.delete(id) : state.ptext.add(id); render(); }
   else if (act === "save-note") {
     const text = state.drafts[id]; if (text === undefined) return;
     saveStatus(id, { notiz: text }).then(() => { if (state.drafts[id] === text) delete state.drafts[id]; toast("Notiz gespeichert"); render(); });
   }
+  else if (act === "export-toggle") { state.exp.open = !state.exp.open; persist(); render(); }
+  else if (act === "exfmt") { state.exp.fmt = b.dataset.v; persist(); render(); }
   else if (act === "del-ask") { state.confirmDel = id; render(); }
   else if (act === "del-cancel") { state.confirmDel = null; render(); }
-  else if (act === "del-run") deleteRun(id);
+  else if (act === "del-run") deleteRuns([id], "Recherche gelöscht");
+  else if (act === "demo-ask") { state.confirmDemo = true; render(); }
+  else if (act === "demo-cancel") { state.confirmDemo = false; render(); }
+  else if (act === "demo-del") deleteRuns(state.runs.filter((r) => r.beispiel).map((r) => r.id), "Beispieldaten gelöscht");
   else if (act === "import") doImport();
-  else if (act === "reset-filters") { Object.assign(state.filters, { q: "", min: "0", remote: "alle", plattform: "alle", status: "aktiv" }); persist(); render(); }
+  else if (act === "mv-save") saveMailTpl();
+  else if (act === "mv-reset") { state.mvDraft = { ...DEFAULT_MAIL }; render(); }
+  else if (act === "abs-save") saveAbsender();
+  else if (act === "reset-filters") { Object.assign(state.filters, { q: "", seg: "alle", zeit: "alle", min: "0", remote: "alle", status: "aktiv" }); persist(); render(); }
+  else if (act === "go-import" || act === "go-conn" || act === "go-demo") {
+    state.tab = "einstellungen"; persist(); render();
+    scrollToId(act === "go-import" ? "import" : act === "go-conn" ? "h-conn" : "demo");
+    if (act === "go-import") { const t = document.getElementById("import-json"); if (t && !t.disabled) t.focus({ preventScroll: true }); }
+  }
 });
 document.addEventListener("change", (e) => {
   const t = e.target;
   if (t.dataset.filter) { state.filters[t.dataset.filter] = t.value; persist(); renderList(); }
-  else if (t.id === "mv-app") { state.mailApp = t.value; persist(); render(); }
+  else if (t.dataset.sel) {
+    const sid = t.dataset.sel; const g = groups().map.get(sid); if (!g) return;
+    const s = new Set(state.sel[sid] || g.berater.map((b) => b.key));
+    t.checked ? s.add(t.dataset.key) : s.delete(t.dataset.key);
+    state.sel[sid] = s; render();
+  }
+  else if (t.dataset.statusFor) {
+    saveStatus(t.dataset.statusFor, { status: t.value });
+    toast(`Status: ${(STATUS.find((s) => s.k === t.value) || {}).l}`);
+    render();
+  }
   else if (t.dataset.anredeFor !== undefined) {
     saveAnrede(t.dataset.anredeFor, t.value);
     toast(t.value ? `Anrede: ${t.value}` : "Anrede zurückgesetzt");
-    state.tab === "recherchen" ? renderList() : render();
-  }
-  else if (t.dataset.export) {
-    const k = t.dataset.export;
-    state.exp[k] = t.type === "checkbox" ? t.checked : t.value;
-    persist(); renderList();
-    const again = document.getElementById(t.id); if (again) again.focus({ preventScroll: true });
-  }
-  else if (t.dataset.statusFor) {
-    const pid = t.dataset.statusFor;
-    saveStatus(pid, { status: t.value });
-    const lbl = (STATUS.find((s) => s.k === t.value) || {}).l;
-    toast(`Status: ${lbl}`);
     render();
   }
+  else if (t.dataset.export) { state.exp[t.dataset.export] = t.checked; persist(); render(); }
 });
 document.addEventListener("input", (e) => {
   const t = e.target;
   if (t.id === "f-q") { state.filters.q = t.value; renderList(); }
   else if (t.dataset.noteFor) {
     state.drafts[t.dataset.noteFor] = t.value;
-    const btn = t.closest(".note").querySelector('[data-act="save-note"]'); if (btn) btn.disabled = false;
+    const btn = t.closest(".note-box").querySelector('[data-act="save-note"]'); if (btn) btn.disabled = false;
   }
-  else if (t.id === "import-json") { state.importText = t.value; }
+  else if (t.id === "import-json") state.importText = t.value;
+  else if (t.dataset.abs) {
+    state.absDraft = state.absDraft || { ...absStored() };
+    state.absDraft[t.dataset.abs] = t.value;
+    const b = document.querySelector('[data-act="abs-save"]'); if (b) b.disabled = false;
+  }
   else if (t.id === "mv-betreff" || t.id === "mv-text" || t.id === "mv-angebot") {
     state.mvDraft = state.mvDraft || mailTpl();
     state.mvDraft[{ "mv-text": "text", "mv-angebot": "angebot", "mv-betreff": "betreff" }[t.id]] = t.value;
     const b = document.querySelector('[data-act="mv-save"]'); if (b) b.disabled = false;
+    const g = state.loaded.projects ? [...groups().list].sort((x, y) => y.berater.length - x.berater.length || (y.best ?? -1) - (x.best ?? -1))[0] : null;
+    const pv = document.getElementById("mv-preview"); if (g && pv) pv.textContent = mailFor(g, state.mvDraft).body;
   }
 });
 
@@ -1253,27 +1491,32 @@ document.addEventListener("input", (e) => {
 render();
 (async () => {
   const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
-  if (!db) { state.dbState = "missing"; state.loaded.runs = true; render(); return; }
+  if (!db) { state.dbState = "missing"; render(); return; }
   state.db = db; state.dbState = "ready"; render();
   const onErr = (e) => { if (e && e.code === "revoked") { state.db = null; state.dbState = "missing"; render(); } };
   db.collection("recherchen").limit(1000).onSnapshot((snap) => {
-    state.runs = snap.docs.map((d) => ({ ...d.data(), id: d.id })); state.loaded.runs = true; render();
+    state.runs = snap.docs.map((d) => ({ ...d.data(), id: d.id })); state.loaded.runs = true; G = null; render();
   }, onErr);
   db.collection("projekte").limit(1000).onSnapshot((snap) => {
-    state.projects = snap.docs.map((d) => ({ ...d.data(), id: d.id })); state.loaded.projects = true; render();
+    state.projects = snap.docs.map((d) => ({ ...d.data(), id: d.id })); state.loaded.projects = true; G = null; render();
   }, onErr);
   db.collection("status").limit(1000).onSnapshot((snap) => {
     const m = {}; snap.docs.forEach((d) => { m[d.id] = d.data(); }); state.status = m; render();
   }, onErr);
-  db.doc("meta/anbindung").onSnapshot((d) => { state.meta = d.exists ? d.data() : {}; if (state.tab === "anbindung") render(); }, onErr);
+  db.doc("meta/anbindung").onSnapshot((d) => { state.meta = d.exists ? d.data() : {}; if (state.tab === "einstellungen") render(); }, onErr);
   db.doc("meta/mailvorlage").onSnapshot((d) => { state.mailTpl = d.exists ? d.data() : {}; render(); }, onErr);
+  db.doc("meta/absender").onSnapshot((d) => { state.absender = d.exists ? d.data() : {}; render(); }, onErr);
   db.doc("meta/anreden").onSnapshot((d) => {
-    const m = {}; arr(d.exists && d.data().eintraege).forEach((e) => { if (e && e.name && (e.anrede === "Herr" || e.anrede === "Frau")) m[String(e.name)] = e.anrede; });
+    const m = {}; arr(d.exists && d.data().eintraege).forEach((x) => { if (x && x.name && (x.anrede === "Herr" || x.anrede === "Frau")) m[String(x.name)] = x.anrede; });
     state.anreden = m; render();
   }, onErr);
   try {
     const user = await window.claude.use("user");
-    if (user) { const c = await user.can("data.write"); if (c === false) { state.canWrite = false; render(); } }
+    if (user) {
+      const me = await user.me(); state.meName = me.name || "";
+      if (!me.canEdit) state.canWrite = false;
+      render();
+    }
   } catch (e) {}
 })();
 })();
